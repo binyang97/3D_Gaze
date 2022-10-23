@@ -1,0 +1,2 @@
+Feature Representation for the large-scale- scene: co-visibility map
+reference: https://openaccess.thecvf.com/content_ICCV_2017/papers/Liu_Efficient_Global_2D-3D_ICCV_2017_paper.pdf
