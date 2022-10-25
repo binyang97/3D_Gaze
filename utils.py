@@ -46,6 +46,8 @@ for i in range(len(np.array(f['Area_1']['Disjoint_Space']['object']))):
     point_cloud[room_name] = [sub_room_names, sub_room_points]
 
 
+#np.savez('/home/biyang/Documents/3D_Gaze/dataset/point_cloud.npz', **point_cloud)
+
 np.savez('/home/biyang/Documents/3D_Gaze/dataset/point_cloud.npz', **point_cloud)
 
 
