@@ -3,3 +3,7 @@ reference: https://openaccess.thecvf.com/content_ICCV_2017/papers/Liu_Efficient_
 
 Texture mapping:
 https://openaccess.thecvf.com/content_cvpr_2018/papers/Fu_Texture_Mapping_for_CVPR_2018_paper.pdf
+
+RGB registration --> find intersection of the ray with the mesh --> ray tracing
+referemce: Octree-R: An Adaptive Octree for Efficient Ray Tracing
+https://stackoverflow.com/questions/66968822/intersection-between-2d-image-point-and-3d-mesh
