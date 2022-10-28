@@ -7,3 +7,5 @@ https://openaccess.thecvf.com/content_cvpr_2018/papers/Fu_Texture_Mapping_for_CV
 RGB registration --> find intersection of the ray with the mesh --> ray tracing
 referemce: Octree-R: An Adaptive Octree for Efficient Ray Tracing
 https://stackoverflow.com/questions/66968822/intersection-between-2d-image-point-and-3d-mesh
+
+Advice from Petr: looking at the neural network: how to put the scene feature for better gaze estimation. Reference: Adria Recasens gaze following
