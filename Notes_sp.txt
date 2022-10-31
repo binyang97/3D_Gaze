@@ -9,3 +9,13 @@ referemce: Octree-R: An Adaptive Octree for Efficient Ray Tracing
 https://stackoverflow.com/questions/66968822/intersection-between-2d-image-point-and-3d-mesh
 
 Advice from Petr: looking at the neural network: how to put the scene feature for better gaze estimation. Reference: Adria Recasens gaze following
+
+
+ESCNet: Gaze Target Detection with the Understanding of 3D Scenes
+- only uses the 2D visual cues as input
+- first estimate a rough 3D point cloud with images and estimated depth -> extract the front-most map as scene contextual representation
+
+
+'Where are they looking' from Adria Recasens:
+- Using a network to predict the gaze pathway and sailency pathway
+- Inputs are original image and image of the head
