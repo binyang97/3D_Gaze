@@ -1,6 +1,6 @@
 import trimesh
 import cv2
-import mesh_raycast
+#import mesh_raycast
 
 import trimesh_new
 
@@ -14,15 +14,23 @@ import time
 
 import glob
 
+import os
 
+import pyembree
 ## Load the data
-mesh = trimesh.load_mesh("/home/biyang/Documents/3D_Gaze/dataset/apt0/apt0.ply")
+#mesh = trimesh.load_mesh("/home/biyang/Documents/3D_Gaze/dataset/apt0/apt0.ply")
+
+current_path = os.getcwd()
+
+mesh = trimesh.load_mesh(current_path + "/dataset/apt0/apt0.ply")
+
+print(mesh.ray)
 # rgb = cv2.imread("/home/biyang/Documents/3D_Gaze/dataset/apt0/apt0/color_00.jpg")
 index = 20
 
-path_rgb_cam = "/home/biyang/Documents/3D_Gaze/dataset/apt0/apt0/*"
+#path_rgb_cam = "/home/biyang/Documents/3D_Gaze/dataset/apt0/apt0/*"
 
-files = glob.glob(path_rgb_cam)
+files = glob.glob(current_path + "/dataset/apt0/apt0/*")
 
 cam_files = []
 rgb_files = []
