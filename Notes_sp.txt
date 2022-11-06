@@ -23,3 +23,5 @@ ESCNet: Gaze Target Detection with the Understanding of 3D Scenes
 --> The hint from Adira Recasens: 
 The saliency map of an image represents the most prominent and focused pixel of an image. Sometimes, the brighter pixels of an image tell us about the salient of the pixels. This means the brightness of the pixel is directly proportional to the saliency of an image.
 Extract Sailency Map from image --> 3D Sailency Map from scene --> New feature for gaze estimation
+
+
