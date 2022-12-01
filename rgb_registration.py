@@ -25,7 +25,7 @@ current_path = os.getcwd()
 mesh = trimesh.load_mesh(current_path + "/dataset/apt0/apt0.ply")
 
 # rgb = cv2.imread("/home/biyang/Documents/3D_Gaze/dataset/apt0/apt0/color_00.jpg")
-index = 20
+index = 35
 
 #path_rgb_cam = "/home/biyang/Documents/3D_Gaze/dataset/apt0/apt0/*"
 
