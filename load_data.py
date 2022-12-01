@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 import trimesh
-
+from trimesh.scene.cameras import Camera
 # load txt file
 
 #cameras_data = np.loadtxt('./Output/images.txt')
@@ -11,13 +11,17 @@ import trimesh
 
 
 class Visualizer(object):
-    def __init__(self, camera_gt, camera_est, mesh):
+    def __init__(self, camera_gt, camera_est, mesh, resolution, focal_length):
         self.model = mesh
-        self.estimation = camera_est
-        self.gt = camera_gt
+        self.pose_est = camera_est
+        self.pose_gt = camera_gt
+        self.resolution = resolution
+        self.focal_length = focal_length
+
     def visualization(self):
         scene = self.model.scene()
-        camera_marker_gt = trimesh.creation.camera_marker(camera, marker_height=0.4, origin_size=None)
+        camera1 = Camera(resolution=self.resolution, focal_length=self.focal_length)
+        camera_marker_gt = trimesh.creation.camera_marker(self.gt, marker_height=0.4, origin_size=None)
 
 def rewrite_image_txt(path_to_file):
     image_id = []
@@ -81,7 +85,7 @@ def transform_to_world(R_1_gt, T_1_gt, R_rel, T_rel):
     return R_est, T_est
     
 if __name__ == "__main__":
-    txt_filepath= './Output/images.txt'
+    txt_filepath= '/home/biyang/Documents/3D_Gaze/Colmap/output/images.txt'
 
     image_id, camera_params, points_2D, point3D_IDs = rewrite_image_txt(txt_filepath)
 
