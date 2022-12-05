@@ -5,26 +5,16 @@ from trimesh.scene.cameras import Camera
 import math
 from load_ARSceneData import LoadARSceneData
 from sys import platform
+from evaluate import position_error, rotation_error
+from camera_pose_visualizer import CameraPoseVisualizer
+import matplotlib as plt
+import random
 # load txt file
 
 #cameras_data = np.loadtxt('./Output/images.txt')
 
 # Rewrite the data in images.txt (which outputs from the colmap)
 # Split to camera pose data <--> image name, points2D <--> point ID
-
-
-class Visualizer(object):
-    def __init__(self, camera_gt, camera_est, mesh, resolution, focal_length):
-        self.model = mesh
-        self.pose_est = camera_est
-        self.pose_gt = camera_gt
-        self.resolution = resolution
-        self.focal_length = focal_length
-
-    def visualization(self):
-        scene = self.model.scene()
-        camera1 = Camera(resolution=self.resolution, focal_length=self.focal_length)
-        camera_marker_gt = trimesh.creation.camera_marker(self.gt, marker_height=0.4, origin_size=None)
 
 def rewrite_image_txt(path_to_file):
     image_id = []
@@ -134,6 +124,8 @@ if __name__ == "__main__":
     # Windows...
         txt_filepath = 'D:/Documents/Semester_Project/Colmap_Test/Output/images.txt'
 
+    VISUALIZATION = False
+
     image_id, camera_params, points_2D, point3D_IDs = rewrite_image_txt(txt_filepath)
 
     #print(len(point3D_IDs))
@@ -177,15 +169,66 @@ if __name__ == "__main__":
     pose_gt_reorder = []
     for image in image_id:
         frame_id = image[-11:-4]
-        pose_frame_gt = pose_gt[frame_id]
+        if frame_id in pose_gt.keys():
+            pose_frame_gt = pose_gt[frame_id]
+        else:
+            if str(float(frame_id)-0.001) in pose_gt.keys():
+                pose_frame_gt = pose_gt[str(float(frame_id)-0.001)]
+            elif str(float(frame_id)+0.001) in pose_gt.keys():
+                pose_frame_gt = pose_gt[str(float(frame_id)+0.001)]
         pose_gt_reorder.append(pose_frame_gt)
 
     
+    # Conver the estimated relative pose to world coodinate with help of gt pose of the first frame
+    pose_gt_reorder = np.array(pose_gt_reorder)
+    pose_1_gt = np.array(pose_1_gt)
+
+    rotation_1_gt = np.array(pose_1_gt[:3, :3])
+    translation_1_gt = np.array(pose_1_gt[:3, 3]).reshape(3, 1)
+    
+    rotation_estimate = []
+    translation_estimate = []
+     
+    for (rel_rot, rel_tran) in zip(rotation_relative, translation_relative):
+        rotation_est, translation_est = transform_to_world(rotation_1_gt, translation_1_gt, rel_rot, rel_tran) 
+        rotation_estimate.append(rotation_est)
+        translation_estimate.append(translation_est)
 
 
+    # Calculate the Error
+    rot_error = []
+    tran_error = []
+    for (rot_est, tran_est, pose_gt) in zip(rotation_estimate, translation_estimate, pose_gt_reorder):
+        rot_error.append(rotation_error(rot_est, pose_gt[:3, :3]))
+        tran_error.append(position_error(tran_est, pose_gt[:3, 3]))
 
-    # print(rotation_relative[0])
-    # print(rotation_relative[1])
-    # print(translation_relative[0])
-    # print(translation_relative[1])
+
+    #print(mesh_gt.vertices.shape)
+    # Visualization 
+
+    if VISUALIZATION:
+        bounds = mesh_gt.bounding_box.bounds
+        corners = trimesh.bounds.corners(bounds)
+
+        num_vis = 5
+        vis_choices = np.random.choice(len(image_id), num_vis)
+
+        visualizer = CameraPoseVisualizer([-10, 10], [-10, 10], [-5, 5])
+
+        for index in vis_choices:
+            est_extrinsic = np.concatenate(
+                        [np.concatenate([rotation_estimate[index], translation_estimate[index]], axis=1), np.array([[0, 0, 0, 1]])], axis=0)
+
+            visualizer.extrinsic2pyramid(est_extrinsic, plt.cm.rainbow(index/len(image_id)), 1, alpha = 0.7)
+            visualizer.extrinsic2pyramid(pose_gt_reorder[index], plt.cm.rainbow(index/len(image_id)), 1, alpha = 0.1)
+
+        #visualizer.extrinsic2pyramid(est_extrinsic, 'r', 10)
+
+        visualizer.customize_legend(vis_choices)
+        visualizer.colorbar(len(image_id))
+        visualizer.add_mesh_bbox([corners])
+
+        visualizer.show()
+
+
 
