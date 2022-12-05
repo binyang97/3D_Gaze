@@ -112,7 +112,7 @@ def transform_to_frist_frame(R1, T1, R2, T2):
 # order of transformation is: world->cam1 (camera of first frame) -> target frame
 def transform_to_world(R_1_gt, T_1_gt, R_rel, T_rel):
     R_est = R_1_gt @ R_rel
-    T_est = T_1_gt + T_rel
+    T_est = T_1_gt + R_1_gt @ T_rel
 
     return R_est, T_est
     
@@ -124,7 +124,7 @@ if __name__ == "__main__":
     # Windows...
         txt_filepath = 'D:/Documents/Semester_Project/Colmap_Test/Output/images.txt'
 
-    VISUALIZATION = False
+    VISUALIZATION = True
 
     image_id, camera_params, points_2D, point3D_IDs = rewrite_image_txt(txt_filepath)
 
@@ -162,8 +162,8 @@ if __name__ == "__main__":
     pose_gt, mesh_gt, intrinsics = LoadARSceneData(traj_path, mesh_path, intrinsic_path)
 
 
-    frame_1_id = image_id[0][-11:-4]
-    pose_1_gt = pose_gt[frame_1_id]
+    # frame_1_id = image_id[0][-11:-4]
+    # pose_1_gt = pose_gt[frame_1_id]
     
     # Need to align the ground truth to estimated result
     pose_gt_reorder = []
@@ -178,10 +178,22 @@ if __name__ == "__main__":
                 pose_frame_gt = pose_gt[str(float(frame_id)+0.001)]
         pose_gt_reorder.append(pose_frame_gt)
 
-    
+
     # Conver the estimated relative pose to world coodinate with help of gt pose of the first frame
     pose_gt_reorder = np.array(pose_gt_reorder)
-    pose_1_gt = np.array(pose_1_gt)
+    # ARKitScenes provides the ground truth pose in form of camera --> world
+    # Colmap outputs pose in form of world --> camera
+    # The pose needs to be utilized in the same reference coordinate
+    for i, pose in enumerate(pose_gt_reorder):
+        T = pose[:3, 3].reshape(3, 1)
+        R = pose[:3, :3]
+        T_inv = np.matmul(-R.T, T)
+        R_inv = R.T
+        RT_inv = np.concatenate(((R_inv, T_inv)), axis=-1)
+        world2cam = np.vstack((RT_inv, np.array([0, 0, 0, 1])))
+        pose_gt_reorder[i] = world2cam
+
+    pose_1_gt = pose_gt_reorder[0]
 
     rotation_1_gt = np.array(pose_1_gt[:3, :3])
     translation_1_gt = np.array(pose_1_gt[:3, 3]).reshape(3, 1)
@@ -203,6 +215,8 @@ if __name__ == "__main__":
         tran_error.append(position_error(tran_est, pose_gt[:3, 3]))
 
 
+    print(rot_error[:10])
+    print(tran_error[:10])
     #print(mesh_gt.vertices.shape)
     # Visualization 
 
@@ -219,7 +233,7 @@ if __name__ == "__main__":
             est_extrinsic = np.concatenate(
                         [np.concatenate([rotation_estimate[index], translation_estimate[index]], axis=1), np.array([[0, 0, 0, 1]])], axis=0)
 
-            visualizer.extrinsic2pyramid(est_extrinsic, plt.cm.rainbow(index/len(image_id)), 1, alpha = 0.7)
+            visualizer.extrinsic2pyramid(est_extrinsic, plt.cm.rainbow(index/len(image_id)), 1, alpha = 0.6)
             visualizer.extrinsic2pyramid(pose_gt_reorder[index], plt.cm.rainbow(index/len(image_id)), 1, alpha = 0.1)
 
         #visualizer.extrinsic2pyramid(est_extrinsic, 'r', 10)
