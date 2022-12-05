@@ -2,6 +2,8 @@ import numpy as np
 from scipy.spatial.transform import Rotation as R
 import trimesh
 from trimesh.scene.cameras import Camera
+import math
+from load_ARSceneData import LoadARSceneData
 # load txt file
 
 #cameras_data = np.loadtxt('./Output/images.txt')
@@ -63,10 +65,49 @@ def quat_to_euler(Q):
     euler_angles = R.from_quat(Q)
     return euler_angles  
 
+
+def eulerAnglesToRotationMatrix(theta):
+    """Euler rotation matrix with clockwise logic.
+    Rotation
+    Args:
+        theta: list of float
+            [theta_x, theta_y, theta_z]
+    Returns:
+        R: np.array (3, 3)
+            rotation matrix of Rz*Ry*Rx
+    """
+    R_x = np.array(
+        [
+            [1, 0, 0],
+            [0, math.cos(theta[0]), -math.sin(theta[0])],
+            [0, math.sin(theta[0]), math.cos(theta[0])],
+        ]
+    )
+
+    R_y = np.array(
+        [
+            [math.cos(theta[1]), 0, math.sin(theta[1])],
+            [0, 1, 0],
+            [-math.sin(theta[1]), 0, math.cos(theta[1])],
+        ]
+    )
+
+    R_z = np.array(
+        [
+            [math.cos(theta[2]), -math.sin(theta[2]), 0],
+            [math.sin(theta[2]), math.cos(theta[2]), 0],
+            [0, 0, 1],
+        ]
+    )
+
+    R = np.dot(R_z, np.dot(R_y, R_x))
+    return 
+
+
+     
 # In usual SfM process, the world coordinate is set to the camera location of first frame
 # But as proposed in the issue of colmap, the coordinate origin is drifted after applying the bundle adjustment
 # So we have to munually transform back to the first frame for all other frames
-
 def transform_to_frist_frame(R1, T1, R2, T2):
     R1_inv = np.linalg.inv(R1)
     R_diff = R1_inv @ R2
@@ -85,7 +126,8 @@ def transform_to_world(R_1_gt, T_1_gt, R_rel, T_rel):
     return R_est, T_est
     
 if __name__ == "__main__":
-    txt_filepath= '/home/biyang/Documents/3D_Gaze/Colmap/output/images.txt'
+    #txt_filepath= '/home/biyang/Documents/3D_Gaze/Colmap/output/images.txt'
+    txt_filepath = 'D:/Documents/Semester_Project/Colmap_Test/Output/images.txt'
 
     image_id, camera_params, points_2D, point3D_IDs = rewrite_image_txt(txt_filepath)
 
@@ -110,8 +152,30 @@ if __name__ == "__main__":
             rotation_relative.append(R_new)
             translation_relative.append(T_new)
 
-    print(rotation_relative[0])
-    print(rotation_relative[1])
-    print(translation_relative[0])
-    print(translation_relative[1])
+
+    traj_path = "D:/Documents/Semester_Project/Colmap_Test/GT/lowres_wide.traj"
+    mesh_path = "D:/Documents/Semester_Project/Colmap_Test/GT/40777060_3dod_mesh.ply"
+    intrinsic_path = "D:/Documents/Semester_Project/Colmap_Test/GT/40777060_98.764.pincam"
+
+    pose_gt, mesh_gt, intrinsics = LoadARSceneData(traj_path, mesh_path, intrinsic_path)
+
+
+    frame_1_id = image_id[0][-11:-4]
+    pose_1_gt = pose_gt[frame_1_id]
+    
+    # Need to align the ground truth to estimated result
+    pose_gt_reorder = []
+    for image in image_id:
+        frame_id = image[-11:-4]
+        pose_frame_gt = pose_gt[frame_id]
+        pose_gt_reorder.append(pose_frame_gt)
+
+    
+
+
+
+    # print(rotation_relative[0])
+    # print(rotation_relative[1])
+    # print(translation_relative[0])
+    # print(translation_relative[1])
 
