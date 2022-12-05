@@ -4,6 +4,7 @@ import trimesh
 from trimesh.scene.cameras import Camera
 import math
 from load_ARSceneData import LoadARSceneData
+from sys import platform
 # load txt file
 
 #cameras_data = np.loadtxt('./Output/images.txt')
@@ -126,8 +127,12 @@ def transform_to_world(R_1_gt, T_1_gt, R_rel, T_rel):
     return R_est, T_est
     
 if __name__ == "__main__":
-    #txt_filepath= '/home/biyang/Documents/3D_Gaze/Colmap/output/images.txt'
-    txt_filepath = 'D:/Documents/Semester_Project/Colmap_Test/Output/images.txt'
+    if platform == "linux" or platform == "linux2":  
+    # linux
+        txt_filepath= '/home/biyang/Documents/3D_Gaze/Colmap/output/images.txt'
+    elif platform == "win32":
+    # Windows...
+        txt_filepath = 'D:/Documents/Semester_Project/Colmap_Test/Output/images.txt'
 
     image_id, camera_params, points_2D, point3D_IDs = rewrite_image_txt(txt_filepath)
 
@@ -152,10 +157,15 @@ if __name__ == "__main__":
             rotation_relative.append(R_new)
             translation_relative.append(T_new)
 
+    if platform == "linux" or platform == "linux2":  
+        traj_path = '/home/biyang/Documents/3D_Gaze/Colmap/gt/lowres_wide.traj'
+        mesh_path = "/home/biyang/Documents/3D_Gaze/Colmap/gt/40777060_3dod_mesh.ply"
+        intrinsic_path = "/home/biyang/Documents/3D_Gaze/Colmap/gt/40777060_98.764.pincam"
 
-    traj_path = "D:/Documents/Semester_Project/Colmap_Test/GT/lowres_wide.traj"
-    mesh_path = "D:/Documents/Semester_Project/Colmap_Test/GT/40777060_3dod_mesh.ply"
-    intrinsic_path = "D:/Documents/Semester_Project/Colmap_Test/GT/40777060_98.764.pincam"
+    elif platform == "win32":
+        traj_path = "D:/Documents/Semester_Project/Colmap_Test/GT/lowres_wide.traj"
+        mesh_path = "D:/Documents/Semester_Project/Colmap_Test/GT/40777060_3dod_mesh.ply"
+        intrinsic_path = "D:/Documents/Semester_Project/Colmap_Test/GT/40777060_98.764.pincam"
 
     pose_gt, mesh_gt, intrinsics = LoadARSceneData(traj_path, mesh_path, intrinsic_path)
 
