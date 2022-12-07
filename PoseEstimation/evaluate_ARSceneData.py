@@ -6,9 +6,10 @@ import math
 from load_ARSceneData import LoadARSceneData
 from sys import platform
 from evaluate import position_error, rotation_error
-from camera_pose_visualizer import CameraPoseVisualizer
+from camera_pose_visualizer import SimpleCameraPoseVisualizer
 import matplotlib as plt
 import random
+from glob import glob
 # load txt file
 
 #cameras_data = np.loadtxt('./Output/images.txt')
@@ -51,9 +52,15 @@ def rewrite_image_txt(path_to_file):
     return image_id, camera_params, points_2D, point3D_IDs
                 
  # convert the quartenion to euler angles
-def quat_to_euler(Q):
-    
-    euler_angles = R.from_quat(Q)
+def quat_to_euler(Q, colmap = True):
+
+    # Colmap has order qw, qx, qy, qz
+    # But scipy has the order qx, qy, qz, qw
+    if colmap:
+        Q_reorder = np.array([Q[1], Q[2], Q[3], Q[0]])
+        euler_angles = R.from_quat(Q_reorder)
+    else:
+        euler_angles = R.from_quat(Q)
     return euler_angles  
 
 
@@ -100,41 +107,62 @@ def eulerAnglesToRotationMatrix(theta):
 # But as proposed in the issue of colmap, the coordinate origin is drifted after applying the bundle adjustment
 # So we have to munually transform back to the first frame for all other frames
 def transform_to_frist_frame(R1, T1, R2, T2):
-    R1_inv = np.linalg.inv(R1)
-    R_diff = R1_inv @ R2
-    T_diff = R1_inv @ (T2 - T1)
-    T_diff = T_diff.reshape(3,1)
-
+    R_diff = R2 @ R1.T
+    #T_diff = R1_inv @ (T2 - T1)
+    T_diff = T2 - (R2@R1.T)@T1 
+    T_diff = T_diff.reshape(3, 1)
+    
     return R_diff, T_diff
 
 # R_1_gt and T_1_gt are the ground truth transformation matrix w.r.t the world coordinate
 # We combine the two transformation matrix to get the estimated results from SfM 
 # order of transformation is: world->cam1 (camera of first frame) -> target frame
 def transform_to_world(R_1_gt, T_1_gt, R_rel, T_rel):
-    R_est = R_1_gt @ R_rel
-    T_est = T_1_gt + R_1_gt @ T_rel
+    R_est = R_rel @ R_1_gt
+    T_est = T_rel + R_rel@T_1_gt
+
+    # R_est = R_rel @ R_1_gt 
+    # T_est = T_rel + R_rel@T_1_gt
 
     return R_est, T_est
     
 if __name__ == "__main__":
+    ARKitSceneDataID = "41069042"
     if platform == "linux" or platform == "linux2":  
     # linux
-        txt_filepath= '/home/biyang/Documents/3D_Gaze/Colmap/output/images.txt'
+        #txt_filepath= '/home/biyang/Documents/3D_Gaze/Colmap/output/images.txt'
+        txt_filepath = glob('/home/biyang/Documents/3D_Gaze/Colmap/' + ARKitSceneDataID + '/output/*/images.txt')
+        txt_filepath.sort()
     elif platform == "win32":
     # Windows...
         txt_filepath = 'D:/Documents/Semester_Project/Colmap_Test/Output/images.txt'
 
-    VISUALIZATION = True
+    VISUALIZATION = False
+    image_id, camera_params, points_2D, point3D_IDs = rewrite_image_txt(txt_filepath[0])
 
-    image_id, camera_params, points_2D, point3D_IDs = rewrite_image_txt(txt_filepath)
+    for path in txt_filepath[1:]:
+        image_id_extend, camera_params_extend, points_2D_extend, point3D_IDs_extend = rewrite_image_txt(path)
+
+        image_id = image_id + image_id_extend
+        camera_params = np.vstack([camera_params, camera_params_extend])
+        point3D_IDs = np.hstack([point3D_IDs,  point3D_IDs_extend])
+        points_2D = np.concatenate([points_2D, points_2D_extend], axis = 0)
 
     #print(len(point3D_IDs))
     #print(points_2D[0][:10]
     camera_param_1 = camera_params[0]
     euler_angles_1 = quat_to_euler(camera_param_1[:4])
     rotation_1 = euler_angles_1.as_matrix()
-    translation_1 = camera_param_1[4:].T
+    translation_1 = camera_param_1[4:].reshape(3, 1)
+
+    print(rotation_1)
+
+    # From Colmap its still cam2world need to convert it
+    rotation_1 = rotation_1.T
+    trainslation_1 = (-rotation_1) @ translation_1
     
+    #print(transform_to_frist_frame(rotation_1, translation_1, rotation_1, translation_1,))
+
     rotation_relative = [np.eye(3)]
     translation_relative = [np.zeros((3, 1))]
     for i, camera_param in enumerate(camera_params):
@@ -143,16 +171,19 @@ if __name__ == "__main__":
         else:
             euler_angles = quat_to_euler(camera_param[:4])
             rotation_matrix = euler_angles.as_matrix()
-            translation_matrix = camera_param[4:].T
+            translation_matrix = camera_param[4:].reshape(3, 1)
+
+            rotation_matrix = rotation_matrix.T
+            translation_matrix = (-rotation_matrix) @ translation_matrix
 
             R_new, T_new = transform_to_frist_frame(rotation_1, translation_1, rotation_matrix, translation_matrix)
             rotation_relative.append(R_new)
             translation_relative.append(T_new)
 
     if platform == "linux" or platform == "linux2":  
-        traj_path = '/home/biyang/Documents/3D_Gaze/Colmap/gt/lowres_wide.traj'
-        mesh_path = "/home/biyang/Documents/3D_Gaze/Colmap/gt/40777060_3dod_mesh.ply"
-        intrinsic_path = "/home/biyang/Documents/3D_Gaze/Colmap/gt/40777060_98.764.pincam"
+        traj_path = glob('/home/biyang/Documents/3D_Gaze/Colmap/' + ARKitSceneDataID + '/gt' + '/*.traj')[0]
+        mesh_path = glob('/home/biyang/Documents/3D_Gaze/Colmap/' + ARKitSceneDataID + '/gt' + '/*.ply')[0]
+        intrinsic_path = glob('/home/biyang/Documents/3D_Gaze/Colmap/' + ARKitSceneDataID + '/gt' + '/*.pincam')[0]
 
     elif platform == "win32":
         traj_path = "D:/Documents/Semester_Project/Colmap_Test/GT/lowres_wide.traj"
@@ -161,14 +192,12 @@ if __name__ == "__main__":
 
     pose_gt, mesh_gt, intrinsics = LoadARSceneData(traj_path, mesh_path, intrinsic_path)
 
-
     # frame_1_id = image_id[0][-11:-4]
     # pose_1_gt = pose_gt[frame_1_id]
-    
     # Need to align the ground truth to estimated result
     pose_gt_reorder = []
     for image in image_id:
-        frame_id = image[-11:-4]
+        frame_id = image[-12:-4]
         if frame_id in pose_gt.keys():
             pose_frame_gt = pose_gt[frame_id]
         else:
@@ -206,35 +235,42 @@ if __name__ == "__main__":
         rotation_estimate.append(rotation_est)
         translation_estimate.append(translation_est)
 
-
     # Calculate the Error
     rot_error = []
     tran_error = []
-    for (rot_est, tran_est, pose_gt) in zip(rotation_estimate, translation_estimate, pose_gt_reorder):
-        rot_error.append(rotation_error(rot_est, pose_gt[:3, :3]))
-        tran_error.append(position_error(tran_est, pose_gt[:3, 3]))
+    for rot_est, tran_est, pose in zip(rotation_estimate, translation_estimate, pose_gt_reorder):
+        rot_error.append(rotation_error(rot_est, pose[:3, :3]))
+        tran_error.append(position_error(tran_est, pose[:3, 3].reshape(3, 1)))
 
-
-    print(rot_error[:10])
-    print(tran_error[:10])
+    print(rot_error[-10:])
+    print(tran_error[-10:])
     #print(mesh_gt.vertices.shape)
     # Visualization 
+
+    # est_extrinsic = np.concatenate(
+    #                     [np.concatenate([rotation_estimate[1], translation_estimate[1]], axis=1), np.array([[0, 0, 0, 1]])], axis=0)
+    # print(pose_gt_reorder[1])
+    # print(est_extrinsic)
+
+    print(sum(np.array(rot_error)>30))
+    print(sum(np.array(tran_error)>3))
 
     if VISUALIZATION:
         bounds = mesh_gt.bounding_box.bounds
         corners = trimesh.bounds.corners(bounds)
 
+        #np.random.seed(1)
         num_vis = 5
         vis_choices = np.random.choice(len(image_id), num_vis)
 
-        visualizer = CameraPoseVisualizer([-10, 10], [-10, 10], [-5, 5])
+        visualizer = SimpleCameraPoseVisualizer([-10, 10], [-10, 10], [-5, 5])
 
         for index in vis_choices:
             est_extrinsic = np.concatenate(
                         [np.concatenate([rotation_estimate[index], translation_estimate[index]], axis=1), np.array([[0, 0, 0, 1]])], axis=0)
 
-            visualizer.extrinsic2pyramid(est_extrinsic, plt.cm.rainbow(index/len(image_id)), 1, alpha = 0.6)
-            visualizer.extrinsic2pyramid(pose_gt_reorder[index], plt.cm.rainbow(index/len(image_id)), 1, alpha = 0.1)
+            visualizer.extrinsic2pyramid(est_extrinsic, plt.cm.rainbow(index/len(image_id)), focal_len_scaled = 0.5, aspect_ratio=0.5, alpha = 0.6)
+            visualizer.extrinsic2pyramid(pose_gt_reorder[index], plt.cm.rainbow(index/len(image_id)), focal_len_scaled = 0.5, aspect_ratio=0.5, alpha = 0.1)
 
         #visualizer.extrinsic2pyramid(est_extrinsic, 'r', 10)
 

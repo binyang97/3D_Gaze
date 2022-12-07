@@ -3,8 +3,9 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+import trimesh
 
-class CameraPoseVisualizer:
+class SimpleCameraPoseVisualizer:
     def __init__(self, xlim, ylim, zlim):
         self.fig = plt.figure(figsize=(18, 7))
         self.ax = self.fig.add_subplot(projection='3d')
@@ -53,3 +54,33 @@ class CameraPoseVisualizer:
     def show(self):
         plt.title('Extrinsic Parameters')
         plt.show()
+
+
+class CameraPoseVisualizer:
+    def __init__(self, mesh, simplified = True):
+        if simplified:
+            bounds = mesh.bounding_box.bounds
+            mesh_bbox = trimesh.creation.box(bounds)
+            self.scene = mesh_bbox.scene()
+        else:
+            self.scene = mesh.scene()
+
+
+    def add_camera(self, resolution, intrinsic, extrinsic, isGT = True):
+        'The input camera should be createde inter Class Trimesh.Scene.Camera'
+        new_scene = trimesh.Scene()
+        new_scene.camera.resolution = resolution
+        new_scene.camera.K = intrinsic
+
+        # Transform to world coordinate (Be careful here should be the cam2world transformation)
+        camera = new_scene.camera
+        if isGT:
+            camera_marker = trimesh.creation.camera_marker(camera, marker_height=0.4, origin_size=0.1)
+        else:
+            camera_marker = trimesh.creation.camera_marker(camera, marker_height=0.4, origin_size=0.05)
+        new_scene.add_geometry(camera_marker)
+        new_scene.apply_transform(extrinsic)
+        self.scene.add_geometry(new_scene)
+
+    def show(self):
+        self.scene.show()
