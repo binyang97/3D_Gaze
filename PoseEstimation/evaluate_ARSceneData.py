@@ -10,6 +10,7 @@ from camera_pose_visualizer import SimpleCameraPoseVisualizer
 import matplotlib as plt
 import random
 from glob import glob
+import re
 # load txt file
 
 #cameras_data = np.loadtxt('./Output/images.txt')
@@ -137,7 +138,8 @@ if __name__ == "__main__":
     # Windows...
         txt_filepath = 'D:/Documents/Semester_Project/Colmap_Test/Output/images.txt'
 
-    VISUALIZATION = False
+    VISUALIZATION = True
+    SCALEBACK = True
     image_id, camera_params, points_2D, point3D_IDs = rewrite_image_txt(txt_filepath[0])
 
     for path in txt_filepath[1:]:
@@ -157,9 +159,6 @@ if __name__ == "__main__":
 
     print(rotation_1)
 
-    # From Colmap its still cam2world need to convert it
-    rotation_1 = rotation_1.T
-    trainslation_1 = (-rotation_1) @ translation_1
     
     #print(transform_to_frist_frame(rotation_1, translation_1, rotation_1, translation_1,))
 
@@ -172,9 +171,6 @@ if __name__ == "__main__":
             euler_angles = quat_to_euler(camera_param[:4])
             rotation_matrix = euler_angles.as_matrix()
             translation_matrix = camera_param[4:].reshape(3, 1)
-
-            rotation_matrix = rotation_matrix.T
-            translation_matrix = (-rotation_matrix) @ translation_matrix
 
             R_new, T_new = transform_to_frist_frame(rotation_1, translation_1, rotation_matrix, translation_matrix)
             rotation_relative.append(R_new)
@@ -195,9 +191,13 @@ if __name__ == "__main__":
     # frame_1_id = image_id[0][-11:-4]
     # pose_1_gt = pose_gt[frame_1_id]
     # Need to align the ground truth to estimated result
+    marker1 = '_'
+    marker2 = '.png'
+    regexPattern = marker1 + '(.+?)' + marker2
     pose_gt_reorder = []
-    for image in image_id:
-        frame_id = image[-12:-4]
+    for name in image_id:
+        name = name.split("/")[-1]
+        frame_id = re.search(regexPattern, name).group(1)
         if frame_id in pose_gt.keys():
             pose_frame_gt = pose_gt[frame_id]
         else:
@@ -214,10 +214,10 @@ if __name__ == "__main__":
     # Colmap outputs pose in form of world --> camera
     # The pose needs to be utilized in the same reference coordinate
     for i, pose in enumerate(pose_gt_reorder):
-        T = pose[:3, 3].reshape(3, 1)
-        R = pose[:3, :3]
-        T_inv = np.matmul(-R.T, T)
-        R_inv = R.T
+        Translation = pose[:3, 3].reshape(3, 1)
+        Rotation = pose[:3, :3]
+        T_inv = np.matmul(-Rotation.T, Translation)
+        R_inv = Rotation.T
         RT_inv = np.concatenate(((R_inv, T_inv)), axis=-1)
         world2cam = np.vstack((RT_inv, np.array([0, 0, 0, 1])))
         pose_gt_reorder[i] = world2cam
@@ -235,6 +235,20 @@ if __name__ == "__main__":
         rotation_estimate.append(rotation_est)
         translation_estimate.append(translation_est)
 
+
+    # Simple Test for scaling the translation vector back
+    distance = 0
+    for tran_est, pose in zip(translation_estimate, pose_gt_reorder):
+
+        tran_gt = pose[:3, 3].reshape(3, 1)
+        distance += np.linalg.norm(tran_gt) / np.linalg.norm(tran_est)
+
+    scale = distance / len(pose_gt_reorder)
+    print(scale, distance)
+
+    for i in range(len(translation_estimate)):
+        translation_estimate[i] = translation_estimate[i] * scale
+
     # Calculate the Error
     rot_error = []
     tran_error = []
@@ -242,8 +256,8 @@ if __name__ == "__main__":
         rot_error.append(rotation_error(rot_est, pose[:3, :3]))
         tran_error.append(position_error(tran_est, pose[:3, 3].reshape(3, 1)))
 
-    print(rot_error[-10:])
-    print(tran_error[-10:])
+    print(rot_error[:30])
+    print(tran_error[:10])
     #print(mesh_gt.vertices.shape)
     # Visualization 
 
@@ -252,8 +266,8 @@ if __name__ == "__main__":
     # print(pose_gt_reorder[1])
     # print(est_extrinsic)
 
-    print(sum(np.array(rot_error)>30))
-    print(sum(np.array(tran_error)>3))
+    print(sum(np.array(rot_error)>10))
+    print(sum(np.array(tran_error)>2))
 
     if VISUALIZATION:
         bounds = mesh_gt.bounding_box.bounds

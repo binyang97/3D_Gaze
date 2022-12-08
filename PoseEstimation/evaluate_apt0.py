@@ -15,7 +15,6 @@ import os
 
 
 if __name__ == "__main__":
-    ARKitSceneDataID = "41069042"
     if platform == "linux" or platform == "linux2":  
     # linux
         #txt_filepath= '/home/biyang/Documents/3D_Gaze/Colmap/output/images.txt'
@@ -40,7 +39,7 @@ if __name__ == "__main__":
     camera_param_1 = camera_params[0]
     euler_angles_1 = quat_to_euler(camera_param_1[:4])
     rotation_1 = euler_angles_1.as_matrix()
-    translation_1 = camera_param_1[4:].T
+    translation_1 = camera_param_1[4:].reshape(3, 1)
     
 
     rotation_relative = [np.eye(3)]
@@ -51,9 +50,7 @@ if __name__ == "__main__":
         else:
             euler_angles = quat_to_euler(camera_param[:4])
             rotation_matrix = euler_angles.as_matrix()
-            translation_matrix = camera_param[4:].T
-            rotation_matrix = rotation_matrix.T
-            translation_matrix = (-rotation_matrix) @ translation_matrix
+            translation_matrix = camera_param[4:].reshape(3,1)
 
             R_new, T_new = transform_to_frist_frame(rotation_1, translation_1, rotation_matrix, translation_matrix)
             rotation_relative.append(R_new)
@@ -114,11 +111,11 @@ if __name__ == "__main__":
     for rot_est, tran_est, rot_gt, tran_gt in zip(rotation_estimate, translation_estimate, rotation_gt_reorder, transolation_gt_reorder):   
         rot_error.append(rotation_error(rot_est, rot_gt))
         tran_error.append(position_error(tran_est, tran_gt))
-    print(sum(np.array(rot_error)>5))
+    print(sum(np.array(rot_error)>10))
     print(sum(np.array(tran_error)>1))
 
-    print(rot_error[-20:])
-    print(tran_error[-20:])
+    print(rot_error[:50])
+    print(tran_error[:20])
     if VISUALIZATION:
         bounds = mesh_gt.bounding_box.bounds
         corners = trimesh.bounds.corners(bounds)
