@@ -47,8 +47,9 @@ if __name__ == "__main__":
     o3d.visualization.draw_geometries([pcd_sample])
 
     
-    reg_p2p = o3d.pipelines.registration.registration_icp( \
-        source, target, threshold, trans_init, \
-        o3d.pipelines.registration.TransformationEstimationPointToPoint(with_scale = True))
+    # reg_p2p = o3d.pipelines.registration.registration_icp( \
+    #     source, target, threshold, trans_init, \
+    #     o3d.pipelines.registration.TransformationEstimationPointToPoint(with_scale = True))
 
 
+    # Downsample the pcd for global registration
