@@ -36,6 +36,8 @@ if __name__ == "__main__":
         points_2D = np.concatenate([points_2D, points_2D_extend], axis = 0)
     #print(len(point3D_IDs))
     #print(points_2D[0][:10]
+
+
     camera_param_1 = camera_params[0]
     euler_angles_1 = quat_to_euler(camera_param_1[:4])
     rotation_1 = euler_angles_1.as_matrix()
@@ -44,6 +46,7 @@ if __name__ == "__main__":
 
     rotation_relative = [np.eye(3)]
     translation_relative = [np.zeros((3, 1))]
+
     for i, camera_param in enumerate(camera_params):
         if i == 0:
             pass

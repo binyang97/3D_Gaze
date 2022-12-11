@@ -157,8 +157,6 @@ if __name__ == "__main__":
     rotation_1 = euler_angles_1.as_matrix()
     translation_1 = camera_param_1[4:].reshape(3, 1)
 
-    print(rotation_1)
-
     
     #print(transform_to_frist_frame(rotation_1, translation_1, rotation_1, translation_1,))
 
@@ -237,14 +235,14 @@ if __name__ == "__main__":
 
 
     # Simple Test for scaling the translation vector back
-    distance = 0
-    for tran_est, pose in zip(translation_estimate, pose_gt_reorder):
+    # distance = 0
+    # for tran_est, pose in zip(translation_estimate, pose_gt_reorder):
 
-        tran_gt = pose[:3, 3].reshape(3, 1)
-        distance += np.linalg.norm(tran_gt) / np.linalg.norm(tran_est)
+    #     tran_gt = pose[:3, 3].reshape(3, 1)
+    #     distance += np.linalg.norm(tran_gt) / np.linalg.norm(tran_est)
 
-    scale = distance / len(pose_gt_reorder)
-    print(scale, distance)
+    # scale = distance / len(pose_gt_reorder)
+    # print(scale, distance)
 
     for i in range(len(translation_estimate)):
         translation_estimate[i] = translation_estimate[i] * scale
