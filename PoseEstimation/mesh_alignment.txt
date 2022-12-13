@@ -1,0 +1,70 @@
+mesh alignment experiments [global registration result, local refinement]
+
+-- Without any preprocessing of the reconstructed data ----
+sample pc = 10000
+voxel_size = 0.05 m
+radius (estimated_normals) = 0.1 m
+o3d.pipelines.registration.CorrespondenceCheckerBasedOnEdgeLength(0.9)
+
+RegistrationResult with fitness=1.250319e-02, inlier_rmse=5.562796e-02, and correspondence_set size of 3237
+RegistrationResult with fitness=3.227069e-04, inlier_rmse=1.531526e-02, and correspondence_set size of 169
+
+
+sample pc = num(reconstruction.points) = 523695
+voxel_size = 0.05 m
+radius (estimated_normals) = 0.1 m
+o3d.pipelines.registration.CorrespondenceCheckerBasedOnEdgeLength(0.9)
+
+RegistrationResult with fitness=4.664071e-02, inlier_rmse=4.505623e-02, and correspondence_set size of 12075
+RegistrationResult with fitness=1.436905e-02, inlier_rmse=1.346842e-02, and correspondence_set size of 7525
+
+
+sample pc = 100000
+voxel_size = 0.05 m
+radius (estimated_normals) = 0.1 m
+o3d.pipelines.registration.CorrespondenceCheckerBasedOnEdgeLength(0.9)
+
+RegistrationResult with fitness=3.844044e-02, inlier_rmse=4.686054e-02, and correspondence_set size of 9952
+RegistrationResult with fitness=7.481454e-03, inlier_rmse=1.511119e-02, and correspondence_set size of 3918
+
+
+sample pc = 500000
+voxel_size = 0.05 m
+radius (estimated_normals) = 0.1 m
+o3d.pipelines.registration.CorrespondenceCheckerBasedOnEdgeLength(0.2)
+RegistrationResult with fitness=3.053605e-01, inlier_rmse=4.493908e-02, and correspondence_set size of 79056
+RegistrationResult with fitness=1.021950e-01, inlier_rmse=1.350802e-02, and correspondence_set size of 53519
+
+
+
+-- statistical outlier removal on pcd_reconstruction (~524000 --> ~400000)----
+-- statistical outlier removal on pcd_gt(~500000 --> ~440000)----
+sample pc = 500000
+voxel_size = 0.05 m
+radius (estimated_normals) = 0.1 m
+o3d.pipelines.registration.CorrespondenceCheckerBasedOnEdgeLength(0.9)
+
+RegistrationResult with fitness=4.513933e-02, inlier_rmse=4.765852e-02, and correspondence_set size of 6763
+RegistrationResult with fitness=1.070542e-02, inlier_rmse=1.348772e-02, and correspondence_set size of 4274
+
+
+sample pc = 500000
+voxel_size = 0.05 m
+radius (estimated_normals) = 0.1 m
+o3d.pipelines.registration.CorrespondenceCheckerBasedOnEdgeLength(0.2)
+
+RegistrationResult with fitness=3.056299e-01, inlier_rmse=4.522130e-02, and correspondence_set size of 45791
+RegistrationResult with fitness=8.821577e-02, inlier_rmse=1.333593e-02, and correspondence_set size of 35219
+
+
+-- statistical outlier removal on pcd_reconstruction (~524000 --> ~400000)----
+-- statistical outlier removal on pcd_gt(~500000 --> ~440000)----
+-- Fast global registration ----
+
+sample pc = 500000
+voxel_size = 0.05 m
+radius (estimated_normals) = 0.1 m
+o3d.pipelines.registration.CorrespondenceCheckerBasedOnEdgeLength(0.9)
+
+RegistrationResult with fitness=1.708660e-03, inlier_rmse=1.924221e-02, and correspondence_set size of 256
+RegistrationResult with fitness=2.031375e-03, inlier_rmse=1.318354e-02, and correspondence_set size of 811

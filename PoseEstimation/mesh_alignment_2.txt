@@ -1,0 +1,93 @@
+no filtering 
+sample pc = 500000
+voxel_size = 0.05 m
+radius (estimated_normals) = 0.1 m
+o3d.pipelines.registration.CorrespondenceCheckerBasedOnEdgeLength(0.2)
+
+RegistrationResult with fitness=3.053605e-01, inlier_rmse=4.493908e-02, and correspondence_set size of 79056
+RegistrationResult with fitness=1.021950e-01, inlier_rmse=1.350802e-02, and correspondence_set size of 53519
+
+RegistrationResult with fitness=2.269346e-01, inlier_rmse=4.679012e-02, and correspondence_set size of 58752
+RegistrationResult with fitness=5.395507e-02, inlier_rmse=1.364652e-02, and correspondence_set size of 28256
+
+RegistrationResult with fitness=2.554134e-01, inlier_rmse=4.483058e-02, and correspondence_set size of 66125
+RegistrationResult with fitness=7.828412e-02, inlier_rmse=1.356272e-02, and correspondence_set size of 40997
+
+
+with filtering 
+sample pc = 500000
+voxel_size = 0.05 m
+radius (estimated_normals) = 0.1 m
+o3d.pipelines.registration.CorrespondenceCheckerBasedOnEdgeLength(0.2)
+
+RegistrationResult with fitness=3.056299e-01, inlier_rmse=4.522130e-02, and correspondence_set size of 45791
+RegistrationResult with fitness=8.821577e-02, inlier_rmse=1.333593e-02, and correspondence_set size of 35219
+
+RegistrationResult with fitness=2.508193e-01, inlier_rmse=4.556173e-02, and correspondence_set size of 37579
+RegistrationResult with fitness=7.078001e-02, inlier_rmse=1.344875e-02, and correspondence_set size of 28258
+
+
+
+no filtering 
+sample pc = 500000
+voxel_size = 0.005 m
+
+o3d.pipelines.registration.CorrespondenceCheckerBasedOnEdgeLength(0.2)
+
+RegistrationResult with fitness=5.654391e-03, inlier_rmse=5.719024e-03, and correspondence_set size of 2953
+RegistrationResult with fitness=5.728525e-05, inlier_rmse=1.458824e-03, and correspondence_set size of 30
+
+
+no filtering 
+sample pc = 500000
+voxel_size = 0.5 m
+
+o3d.pipelines.registration.CorrespondenceCheckerBasedOnEdgeLength(0.2)
+
+RegistrationResult with fitness=9.353572e-01, inlier_rmse=4.123735e-01, and correspondence_set size of 6193
+RegistrationResult with fitness=5.615597e-01, inlier_rmse=9.596762e-02, and correspondence_set size of 294086
+
+
+no filtering 
+sample pc = 500000
+voxel_size = 0.1 m
+
+o3d.pipelines.registration.CorrespondenceCheckerBasedOnEdgeLength(0.2)
+
+RegistrationResult with fitness=4.549763e-01, inlier_rmse=8.878761e-02, and correspondence_set size of 48965
+RegistrationResult with fitness=1.867786e-01, inlier_rmse=2.310049e-02, and correspondence_set size of 97815
+
+
+no filtering 
+sample pc = 500000
+voxel_size = 0.1 m
+distance_threshold = voxel_size * 1 (1.5) (global registration)
+
+o3d.pipelines.registration.CorrespondenceCheckerBasedOnEdgeLength(0.2)
+
+RegistrationResult with fitness=1.456581e-01, inlier_rmse=3.177180e-02, and correspondence_set size of 37710
+RegistrationResult with fitness=7.853999e-02, inlier_rmse=1.335068e-02, and correspondence_set size of 41131
+
+
+no filtering 
+sample pc = 500000
+voxel_size = 0.1 m
+distance_threshold = voxel_size * 2.5 (1.5) (global registration)
+
+o3d.pipelines.registration.CorrespondenceCheckerBasedOnEdgeLength(0.2)
+
+RegistrationResult with fitness=4.221805e-01, inlier_rmse=6.534435e-02, and correspondence_set size of 109300
+RegistrationResult with fitness=1.161649e-01, inlier_rmse=1.333406e-02, and correspondence_set size of 60835
+
+no filtering 
+sample pc = 500000
+voxel_size = 0.1 m
+distance_threshold = voxel_size * 1.5 (1.5) (global registration)
+
+o3d.pipelines.registration.CorrespondenceCheckerBasedOnEdgeLength(0.5)
+
+RegistrationResult with fitness=1.433173e-01, inlier_rmse=4.508266e-02, and correspondence_set size of 37104
+RegistrationResult with fitness=5.054851e-02, inlier_rmse=1.347375e-02, and correspondence_set size of 26472
+
+
+

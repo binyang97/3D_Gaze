@@ -1,0 +1,2 @@
+ToDo: 1.  Use the dense reconstructed mesh as the input, maybe run again the reconstruction
+ToDo: 2.  Increase the iteration number in the ransac registration
