@@ -35,6 +35,7 @@ def display_inlier_outlier(cloud, ind):
 def preprocess_point_cloud(pcd, voxel_size):
     print(":: Downsample with a voxel size %.3f." % voxel_size)
     pcd_down = pcd.voxel_down_sample(voxel_size)
+    print(len(pcd_down.points))
 
     radius_normal = voxel_size * 2
     print(":: Estimate normal with search radius %.3f." % radius_normal)
@@ -65,9 +66,9 @@ def prepare_dataset(source, target, voxel_size):
     print(":: Load two point clouds and disturb initial pose.")
 
     #demo_icp_pcds = o3d.data.DemoICPPointClouds()
-    trans_init = np.asarray([[0.0, 0.0, 1.0, 0.0], [1.0, 0.0, 0.0, 0.0],
-                             [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 0.0, 1.0]])
-    source.transform(trans_init)
+    # trans_init = np.asarray([[0.0, 0.0, 1.0, 0.0], [1.0, 0.0, 0.0, 0.0],
+    #                          [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 0.0, 1.0]])
+    # source.transform(trans_init)
     #draw_registration_result(source, target, np.identity(4))
 
     source_down, source_fpfh = preprocess_point_cloud(source, voxel_size)
@@ -129,9 +130,9 @@ if __name__ == "__main__":
     elif platform == "win32":
     # Windows...
         path_gt = glob("D:/Documents/Semester_Project/Colmap_Test/GT/*.ply")
-        path_reconstruction = glob("D:/Documents/Semester_Project/Colmap_Test/Output/*.ply")
+        path_reconstruction = glob("D:/Documents/Semester_Project/Colmap_Test/Output/meshed-poisson.ply")
 
-    ALIGNMENT = False
+    ALIGNMENT = True
     FILTERING = False
     FAST = False
     
@@ -140,7 +141,7 @@ if __name__ == "__main__":
     mesh_gt = o3d.io.read_triangle_mesh(path_gt[-1])
 
     #number_of_points = len(pcd_reconstruction.points)
-    number_of_points = 100000
+    number_of_points = 500000
     pcd_sample = sample_pc(mesh_gt, number_of_points)
     pcd_reconstruction = sample_pc(mesh_reconstruction, number_of_points)
 
