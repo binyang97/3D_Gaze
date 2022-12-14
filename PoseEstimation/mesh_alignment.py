@@ -123,7 +123,7 @@ if __name__ == "__main__":
     ARKitSceneDataID = "40777060"
     if platform == "linux" or platform == "linux2":  
     # linux
-        path_reconstruction = glob("/home/biyang/Documents/3D_Gaze/Colmap/" + ARKitSceneDataID + "/output/*/*.ply")
+        path_reconstruction = glob("/home/biyang/Documents/3D_Gaze/Colmap/" + ARKitSceneDataID + "/output/*/meshed-poisson.ply")
         path_gt = glob("/home/biyang/Documents/3D_Gaze/Colmap/" + ARKitSceneDataID + "/gt/*.ply")
 
     elif platform == "win32":
@@ -131,16 +131,18 @@ if __name__ == "__main__":
         path_gt = glob("D:/Documents/Semester_Project/Colmap_Test/GT/*.ply")
         path_reconstruction = glob("D:/Documents/Semester_Project/Colmap_Test/Output/*.ply")
 
-    ALIGNMENT = True
+    ALIGNMENT = False
     FILTERING = False
     FAST = False
     
-    pcd_reconstruction = o3d.io.read_point_cloud(path_reconstruction[-1])
+    #pcd_reconstruction = o3d.io.read_point_cloud(path_reconstruction[-1])
+    mesh_reconstruction = o3d.io.read_triangle_mesh(path_reconstruction[-1])
     mesh_gt = o3d.io.read_triangle_mesh(path_gt[-1])
 
     #number_of_points = len(pcd_reconstruction.points)
-    number_of_points = 500000
+    number_of_points = 100000
     pcd_sample = sample_pc(mesh_gt, number_of_points)
+    pcd_reconstruction = sample_pc(mesh_reconstruction, number_of_points)
 
 
     # Visualization --> The scale of two 3D models are different
