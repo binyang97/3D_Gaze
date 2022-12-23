@@ -62,6 +62,17 @@ def draw_registration_result(source, target, transformation):
                                       lookat=[1.9892, 2.0208, 1.8945],
                                       up=[-0.2779, -0.9482, 0.1556])
 
+
+def save_registration_result(source, target, transformation, filename):
+    source_temp = copy.deepcopy(source)
+    target_temp = copy.deepcopy(target)
+    source_temp.paint_uniform_color([1, 0.706, 0])
+    target_temp.paint_uniform_color([0, 0.651, 0.929])
+    source_temp.transform(transformation)
+    output = source_temp + target_temp
+    o3d.io.write_point_cloud(filename, output)
+    print("point cloud is saved")
+
 def prepare_dataset(source, target, voxel_size):
     print(":: Load two point clouds and disturb initial pose.")
 
@@ -135,6 +146,8 @@ if __name__ == "__main__":
     ALIGNMENT = True
     FILTERING = False
     FAST = False
+    SAVE_PCD = False
+    SAVE_REGISTRATION = True
     
     #pcd_reconstruction = o3d.io.read_point_cloud(path_reconstruction[-1])
     mesh_reconstruction = o3d.io.read_triangle_mesh(path_reconstruction[-1])
@@ -144,6 +157,11 @@ if __name__ == "__main__":
     number_of_points = 500000
     pcd_sample = sample_pc(mesh_gt, number_of_points)
     pcd_reconstruction = sample_pc(mesh_reconstruction, number_of_points)
+
+    if SAVE_PCD:
+
+        o3d.io.write_point_cloud("/home/biyang/Documents/3D_Gaze/Colmap/40777060/pointcloud/gt_500000.pcd", pcd_sample)
+        o3d.io.write_point_cloud("/home/biyang/Documents/3D_Gaze/Colmap/40777060/pointcloud/reconstruction_500000.pcd", pcd_reconstruction)
 
 
     # Visualization --> The scale of two 3D models are different
@@ -192,9 +210,13 @@ if __name__ == "__main__":
         print(result_ransac)
         #draw_registration_result(source_down, target_down, result_ransac.transformation)
 
+        if SAVE_REGISTRATION:
+            save_registration_result(source_down, target_down, result_ransac.transformation, "/home/biyang/Documents/results/global_registration.ply")
         result_icp = refine_registration(source, target, result_ransac,
                                     voxel_size)
         print(result_icp)
-        draw_registration_result(source, target, result_icp.transformation)
+        if SAVE_REGISTRATION:
+            save_registration_result(source, target, result_icp.transformation, "/home/biyang/Documents/results/local_refinement.ply")
+        #draw_registration_result(source, target, result_icp.transformation)
 
 
