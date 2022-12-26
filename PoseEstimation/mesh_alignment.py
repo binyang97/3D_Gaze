@@ -208,7 +208,7 @@ if __name__ == "__main__":
                                                 source_fpfh, target_fpfh,
                                                 voxel_size)
         print(result_ransac)
-        #draw_registration_result(source_down, target_down, result_ransac.transformation)
+        draw_registration_result(source_down, target_down, result_ransac.transformation)
 
         if SAVE_REGISTRATION:
             save_registration_result(source_down, target_down, result_ransac.transformation, "/home/biyang/Documents/results/global_registration.ply")
