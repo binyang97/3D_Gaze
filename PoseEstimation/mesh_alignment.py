@@ -6,6 +6,14 @@ from sys import platform
 from glob import glob
 import copy
 
+def normalize_pc(points):
+	centroid = np.mean(points, axis=0)
+	points -= centroid
+	furthest_distance = np.max(np.sqrt(np.sum(abs(points)**2,axis=-1)))
+	points /= furthest_distance
+
+	return points, centroid, furthest_distance
+
 def sample_pc(mesh, num_points, method = "Uniform"):
     if method == "Uniform":
         pcd_sample = mesh.sample_points_uniformly(number_of_points=num_points)
@@ -56,11 +64,12 @@ def draw_registration_result(source, target, transformation):
     source_temp.paint_uniform_color([1, 0.706, 0])
     target_temp.paint_uniform_color([0, 0.651, 0.929])
     source_temp.transform(transformation)
-    o3d.visualization.draw_geometries([source_temp, target_temp],
-                                      zoom=0.4559,
-                                      front=[0.6452, -0.3036, -0.7011],
-                                      lookat=[1.9892, 2.0208, 1.8945],
-                                      up=[-0.2779, -0.9482, 0.1556])
+    o3d.visualization.draw_geometries([source_temp, target_temp])
+    # o3d.visualization.draw_geometries([source_temp, target_temp],
+    #                                   zoom=0.4559,
+    #                                   front=[0.6452, -0.3036, -0.7011],
+    #                                   lookat=[1.9892, 2.0208, 1.8945],
+    #                                   up=[-0.2779, -0.9482, 0.1556])
 
 
 def save_registration_result(source, target, transformation, filename):
@@ -96,7 +105,7 @@ def execute_global_registration(source_down, target_down, source_fpfh,
     result = o3d.pipelines.registration.registration_ransac_based_on_feature_matching(
         source_down, target_down, source_fpfh, target_fpfh, True,
         distance_threshold,
-        o3d.pipelines.registration.TransformationEstimationPointToPoint(with_scaling = True),3, \
+        o3d.pipelines.registration.TransformationEstimationPointToPoint(with_scaling = False),3, \
             [o3d.pipelines.registration.CorrespondenceCheckerBasedOnEdgeLength(0.2),
             o3d.pipelines.registration.CorrespondenceCheckerBasedOnDistance(distance_threshold)
         ], o3d.pipelines.registration.RANSACConvergenceCriteria(100000, 0.999))
@@ -135,28 +144,29 @@ if __name__ == "__main__":
     ARKitSceneDataID = "40777060"
     if platform == "linux" or platform == "linux2":  
     # linux
-        path_reconstruction = glob("/home/biyang/Documents/3D_Gaze/Colmap/" + ARKitSceneDataID + "/output/*/meshed-poisson.ply")
+        path_reconstruction = glob("/home/biyang/Documents/3D_Gaze/Colmap/" + ARKitSceneDataID + "/output/*/fused.ply")
         path_gt = glob("/home/biyang/Documents/3D_Gaze/Colmap/" + ARKitSceneDataID + "/gt/*.ply")
 
     elif platform == "win32":
     # Windows...
         path_gt = glob("D:/Documents/Semester_Project/Colmap_Test/GT/*.ply")
-        path_reconstruction = glob("D:/Documents/Semester_Project/Colmap_Test/Output/meshed-poisson.ply")
+        path_reconstruction = glob("D:/Documents/Semester_Project/Colmap_Test/Output/fused.ply")
 
-    ALIGNMENT = False
+    ALIGNMENT = True
     FILTERING = False
     FAST = False
-    SAVE_PCD = True
+    SAVE_PCD = False
     SAVE_REGISTRATION = False
+    NORMALIZATION = True
     
-    #pcd_reconstruction = o3d.io.read_point_cloud(path_reconstruction[-1])
-    mesh_reconstruction = o3d.io.read_triangle_mesh(path_reconstruction[-1])
+    pcd_reconstruction = o3d.io.read_point_cloud(path_reconstruction[-1])
+    #mesh_reconstruction = o3d.io.read_triangle_mesh(path_reconstruction[-1])
     mesh_gt = o3d.io.read_triangle_mesh(path_gt[-1])
 
     #number_of_points = len(pcd_reconstruction.points)
-    number_of_points = 100000
+    number_of_points = 500000
     pcd_sample = sample_pc(mesh_gt, number_of_points)
-    pcd_reconstruction = sample_pc(mesh_reconstruction, number_of_points)
+    #pcd_reconstruction = sample_pc(mesh_reconstruction, number_of_points)
 
     if SAVE_PCD:
 
@@ -174,6 +184,20 @@ if __name__ == "__main__":
     # pcd_reconstruction = copy.deepcopy(pcd_reconstruction_scaled)
 
     #draw_registration_result(pcd_sample, pcd_reconstruction_scaled, np.eye(4))
+
+    if NORMALIZATION:
+        points_sample = np.asarray(pcd_sample.points)
+        normalized_points_sample, _, _ = normalize_pc(points_sample)
+        pcd_sample.points = o3d.utility.Vector3dVector(normalized_points_sample)
+
+        points_reconstruction = np.asarray(pcd_reconstruction.points)
+        normalized_points_reconstruction, _, _ = normalize_pc(points_reconstruction)
+
+        #print(normalized_points_reconstruction[:20])
+        pcd_reconstruction.points = o3d.utility.Vector3dVector(normalized_points_reconstruction)
+
+        #o3d.visualization.draw_geometries([pcd_reconstruction, pcd_sample])
+        #draw_registration_result(pcd_sample, pcd_reconstruction, np.eye(4))
 
     if FILTERING:
         print("Statistical oulier removal")
@@ -202,7 +226,7 @@ if __name__ == "__main__":
 
     if ALIGNMENT:
 
-        voxel_size = 0.05
+        voxel_size = 0.01
         source, target, source_down, target_down, source_fpfh, target_fpfh = prepare_dataset(pcd_reconstruction, pcd_sample, voxel_size)
 
         if FAST:
@@ -223,6 +247,6 @@ if __name__ == "__main__":
         print(result_icp)
         if SAVE_REGISTRATION:
             save_registration_result(source, target, result_icp.transformation, "/home/biyang/Documents/results/local_refinement.ply")
-        #draw_registration_result(source, target, result_icp.transformation)
+        draw_registration_result(source, target, result_icp.transformation)
 
 
