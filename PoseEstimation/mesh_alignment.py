@@ -143,31 +143,37 @@ if __name__ == "__main__":
         path_gt = glob("D:/Documents/Semester_Project/Colmap_Test/GT/*.ply")
         path_reconstruction = glob("D:/Documents/Semester_Project/Colmap_Test/Output/meshed-poisson.ply")
 
-    ALIGNMENT = True
+    ALIGNMENT = False
     FILTERING = False
     FAST = False
-    SAVE_PCD = False
-    SAVE_REGISTRATION = True
+    SAVE_PCD = True
+    SAVE_REGISTRATION = False
     
     #pcd_reconstruction = o3d.io.read_point_cloud(path_reconstruction[-1])
     mesh_reconstruction = o3d.io.read_triangle_mesh(path_reconstruction[-1])
     mesh_gt = o3d.io.read_triangle_mesh(path_gt[-1])
 
     #number_of_points = len(pcd_reconstruction.points)
-    number_of_points = 500000
+    number_of_points = 100000
     pcd_sample = sample_pc(mesh_gt, number_of_points)
     pcd_reconstruction = sample_pc(mesh_reconstruction, number_of_points)
 
     if SAVE_PCD:
 
-        o3d.io.write_point_cloud("/home/biyang/Documents/3D_Gaze/Colmap/40777060/pointcloud/gt_500000.pcd", pcd_sample)
-        o3d.io.write_point_cloud("/home/biyang/Documents/3D_Gaze/Colmap/40777060/pointcloud/reconstruction_500000.pcd", pcd_reconstruction)
+        o3d.io.write_point_cloud("/home/biyang/Documents/3D_Gaze/Colmap/40777060/pointcloud/gt_100000.ply", pcd_sample)
+        o3d.io.write_point_cloud("/home/biyang/Documents/3D_Gaze/Colmap/40777060/pointcloud/reconstruction_100000.ply", pcd_reconstruction)
 
 
     # Visualization --> The scale of two 3D models are different
     # pcd.paint_uniform_color([1, 0, 0])
 
+    # initial_scale = 1/1.123
     
+    # pcd_reconstruction_scaled = copy.deepcopy(pcd_reconstruction)
+    # pcd_reconstruction_scaled.scale(initial_scale, center=pcd_reconstruction_scaled.get_center())
+    # pcd_reconstruction = copy.deepcopy(pcd_reconstruction_scaled)
+
+    #draw_registration_result(pcd_sample, pcd_reconstruction_scaled, np.eye(4))
 
     if FILTERING:
         print("Statistical oulier removal")
