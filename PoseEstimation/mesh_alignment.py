@@ -112,7 +112,7 @@ def execute_global_registration(source_down, target_down, source_fpfh,
     return result
 
 def refine_registration(source, target, result_ransac, voxel_size):
-    distance_threshold = voxel_size * 0.4
+    distance_threshold = voxel_size * 0.1
     print(":: Point-to-plane ICP registration is applied on original point")
     print("   clouds to refine the alignment. This time we use a strict")
     print("   distance threshold %.3f." % distance_threshold)
@@ -127,6 +127,9 @@ def refine_registration(source, target, result_ransac, voxel_size):
     result = o3d.pipelines.registration.registration_icp(
         source, target, distance_threshold, result_ransac.transformation,
         o3d.pipelines.registration.TransformationEstimationPointToPlane())
+    # result = o3d.pipelines.registration.registration_icp(
+    #     source, target, distance_threshold, result_ransac.transformation,
+    #     o3d.pipelines.registration.TransformationEstimationPointToPoint())
     return result
 
 def execute_fast_global_registration(source_down, target_down, source_fpfh,
@@ -193,7 +196,7 @@ if __name__ == "__main__":
         points_reconstruction = np.asarray(pcd_reconstruction.points)
         normalized_points_reconstruction, _, _ = normalize_pc(points_reconstruction)
 
-        #print(normalized_points_reconstruction[:20])
+        #print(normalized_points_reconstruction[:50])
         pcd_reconstruction.points = o3d.utility.Vector3dVector(normalized_points_reconstruction)
 
         #o3d.visualization.draw_geometries([pcd_reconstruction, pcd_sample])
@@ -226,7 +229,7 @@ if __name__ == "__main__":
 
     if ALIGNMENT:
 
-        voxel_size = 0.01
+        voxel_size = 0.05
         source, target, source_down, target_down, source_fpfh, target_fpfh = prepare_dataset(pcd_reconstruction, pcd_sample, voxel_size)
 
         if FAST:
