@@ -10,7 +10,7 @@ def normalize_pc(points):
 	centroid = np.mean(points, axis=0)
 	points -= centroid
 	furthest_distance = np.max(np.sqrt(np.sum(abs(points)**2,axis=-1)))
-	points /= furthest_distance
+	points /= (furthest_distance*10)
 
 	return points, centroid, furthest_distance
 
@@ -106,7 +106,7 @@ def execute_global_registration(source_down, target_down, source_fpfh,
         source_down, target_down, source_fpfh, target_fpfh, True,
         distance_threshold,
         o3d.pipelines.registration.TransformationEstimationPointToPoint(with_scaling = False),3, \
-            [o3d.pipelines.registration.CorrespondenceCheckerBasedOnEdgeLength(0.2),
+            [o3d.pipelines.registration.CorrespondenceCheckerBasedOnEdgeLength(0.9),
             o3d.pipelines.registration.CorrespondenceCheckerBasedOnDistance(distance_threshold)
         ], o3d.pipelines.registration.RANSACConvergenceCriteria(100000, 0.999))
     return result
@@ -124,28 +124,33 @@ def refine_registration(source, target, result_ransac, voxel_size):
     radius_normal = voxel_size * 2
     source.estimate_normals(search_param = o3d.geometry.KDTreeSearchParamHybrid( radius = radius_normal, max_nn = 30))
     target.estimate_normals(search_param = o3d.geometry.KDTreeSearchParamHybrid( radius = radius_normal, max_nn = 30))
-    # result = o3d.pipelines.registration.registration_icp(
-    #     source, target, distance_threshold, result_ransac.transformation,
-    #     o3d.pipelines.registration.TransformationEstimationPointToPlane())
+
+    ## Point-to-Plane 
+    result = o3d.pipelines.registration.registration_icp(
+        source, target, distance_threshold, result_ransac.transformation,
+        o3d.pipelines.registration.TransformationEstimationPointToPlane())
     
+    ## Colored ICP
     # result = o3d.pipelines.registration.registration_icp(
     #     source, target, distance_threshold, result_ransac.transformation,
     #     o3d.pipelines.registration.TransformationEstimationPointToPoint())
 
-    result = o3d.pipelines.registration.registration_icp(
-        source, target, distance_threshold, result_ransac.transformation,
-        o3d.pipelines.registration.TransformationEstimationForColoredICP())
+    ## Generalized ICP
+    # result = o3d.pipelines.registration.registration_generalized_icp(
+    #     source, target, distance_threshold, result_ransac.transformation,
+    #     o3d.pipelines.registration.TransformationEstimationForGeneralizedICP())
 
+    ## Point-to-Point
     # result = o3d.pipelines.registration.registration_icp(
     #     source, target, distance_threshold, result_ransac.transformation,
-    #     o3d.pipelines.registration.TransformationEstimationPointToPlane())
+    #     o3d.pipelines.registration.TransformationEstimationPointToPoint())
         
     return result
 
-def refine_registration_colored(source, target, result_ransac):
-    voxel_radius = [0.04, 0.02, 0.01]
+def refine_registration_multiscale(source, target, result_ransac):
+    voxel_radius = [0.04, 0.01, 0.0025]
     max_iter = [50, 30, 14]
-    current_transformation = result_ransac
+    current_transformation = result_ransac.transformation
     print("3. Colored point cloud registration")
     for scale in range(3):
         iter = max_iter[scale]
@@ -163,12 +168,20 @@ def refine_registration_colored(source, target, result_ransac):
             o3d.geometry.KDTreeSearchParamHybrid(radius=radius * 2, max_nn=30))
 
         print("3-3. Applying colored point cloud registration")
-        result_icp = o3d.pipelines.registration.registration_colored_icp(
+        # result_icp = o3d.pipelines.registration.registration_colored_icp(
+        #     source_down, target_down, radius, current_transformation,
+        #     o3d.pipelines.registration.TransformationEstimationForColoredICP(),
+        #     o3d.pipelines.registration.ICPConvergenceCriteria(relative_fitness=1e-6,
+        #                                                     relative_rmse=1e-6,
+        #                                                     max_iteration=iter))
+
+        result_icp = o3d.pipelines.registration.registration_icp(
             source_down, target_down, radius, current_transformation,
-            o3d.pipelines.registration.TransformationEstimationForColoredICP(),
+            o3d.pipelines.registration.TransformationEstimationPointToPlane(),
             o3d.pipelines.registration.ICPConvergenceCriteria(relative_fitness=1e-6,
                                                             relative_rmse=1e-6,
                                                             max_iteration=iter))
+                                                            
         current_transformation = result_icp.transformation
     return result_icp
 
@@ -201,7 +214,7 @@ if __name__ == "__main__":
     SAVE_PCD = False
     SAVE_REGISTRATION = False
     NORMALIZATION = True
-    ICP_METHOD = "icp_colored" # or "icp_tandard"
+    ICP_METHOD = "icp_standard" # or "icp_standard"
     
     pcd_reconstruction = o3d.io.read_point_cloud(path_reconstruction[-1])
     #mesh_reconstruction = o3d.io.read_triangle_mesh(path_reconstruction[-1])
@@ -218,17 +231,6 @@ if __name__ == "__main__":
         o3d.io.write_point_cloud("/home/biyang/Documents/3D_Gaze/Colmap/40777060/pointcloud/reconstruction_100000.ply", pcd_reconstruction)
 
 
-    # Visualization --> The scale of two 3D models are different
-    # pcd.paint_uniform_color([1, 0, 0])
-
-    # initial_scale = 1/1.123
-    
-    # pcd_reconstruction_scaled = copy.deepcopy(pcd_reconstruction)
-    # pcd_reconstruction_scaled.scale(initial_scale, center=pcd_reconstruction_scaled.get_center())
-    # pcd_reconstruction = copy.deepcopy(pcd_reconstruction_scaled)
-
-    #draw_registration_result(pcd_sample, pcd_reconstruction_scaled, np.eye(4))
-
     if NORMALIZATION:
         points_sample = np.asarray(pcd_sample.points)
         normalized_points_sample, _, _ = normalize_pc(points_sample)
@@ -236,12 +238,18 @@ if __name__ == "__main__":
 
         points_reconstruction = np.asarray(pcd_reconstruction.points)
         normalized_points_reconstruction, _, _ = normalize_pc(points_reconstruction)
-
-        #print(normalized_points_reconstruction[:50])
         pcd_reconstruction.points = o3d.utility.Vector3dVector(normalized_points_reconstruction)
 
         #o3d.visualization.draw_geometries([pcd_reconstruction, pcd_sample])
         #draw_registration_result(pcd_sample, pcd_reconstruction, np.eye(4))
+
+
+    ## Prescaling is useful, but it is not enough only with normalization
+    # pcd_reconstruction_scaled = copy.deepcopy(pcd_reconstruction)
+    # pcd_reconstruction_scaled.scale(1.5, center=pcd_reconstruction_scaled.get_center())
+    # pcd_reconstruction = copy.deepcopy(pcd_reconstruction_scaled)
+
+    # draw_registration_result(pcd_sample, pcd_reconstruction, np.eye(4))
 
     if FILTERING:
         print("Statistical oulier removal")
@@ -273,6 +281,8 @@ if __name__ == "__main__":
         voxel_size = 0.05
         source, target, source_down, target_down, source_fpfh, target_fpfh = prepare_dataset(pcd_reconstruction, pcd_sample, voxel_size)
 
+        #o3d.visualization.draw_geometries([source_down, target_down])
+
         if FAST:
             result_ransac = execute_fast_global_registration(source_down, target_down,
                                                source_fpfh, target_fpfh,
@@ -287,10 +297,11 @@ if __name__ == "__main__":
         if SAVE_REGISTRATION:
             save_registration_result(source_down, target_down, result_ransac.transformation, "/home/biyang/Documents/results/global_registration.ply")
         if ICP_METHOD == "icp_standard":
-            result_icp = refine_registration(source, target, result_ransac,
-                                        voxel_size)
-        elif ICP_METHOD == "icp_colored":
-            result_icp = refine_registration_colored(source, target, result_ransac)
+            result_icp = refine_registration(source, target, result_ransac, voxel_size)
+        elif ICP_METHOD == "icp_multiscale":
+            result_icp = refine_registration_multiscale(source, target, result_ransac)
+        else:
+            raise NotImplementedError
         print(result_icp)
         if SAVE_REGISTRATION:
             save_registration_result(source, target, result_icp.transformation, "/home/biyang/Documents/results/local_refinement.ply")
