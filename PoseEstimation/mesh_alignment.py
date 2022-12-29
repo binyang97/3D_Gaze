@@ -112,7 +112,7 @@ def execute_global_registration(source_down, target_down, source_fpfh,
     return result
 
 def refine_registration(source, target, result_ransac, voxel_size):
-    distance_threshold = voxel_size * 0.1
+    distance_threshold = voxel_size * 0.4
     print(":: Point-to-plane ICP registration is applied on original point")
     print("   clouds to refine the alignment. This time we use a strict")
     print("   distance threshold %.3f." % distance_threshold)
@@ -124,13 +124,53 @@ def refine_registration(source, target, result_ransac, voxel_size):
     radius_normal = voxel_size * 2
     source.estimate_normals(search_param = o3d.geometry.KDTreeSearchParamHybrid( radius = radius_normal, max_nn = 30))
     target.estimate_normals(search_param = o3d.geometry.KDTreeSearchParamHybrid( radius = radius_normal, max_nn = 30))
-    result = o3d.pipelines.registration.registration_icp(
-        source, target, distance_threshold, result_ransac.transformation,
-        o3d.pipelines.registration.TransformationEstimationPointToPlane())
+    # result = o3d.pipelines.registration.registration_icp(
+    #     source, target, distance_threshold, result_ransac.transformation,
+    #     o3d.pipelines.registration.TransformationEstimationPointToPlane())
+    
     # result = o3d.pipelines.registration.registration_icp(
     #     source, target, distance_threshold, result_ransac.transformation,
     #     o3d.pipelines.registration.TransformationEstimationPointToPoint())
+
+    result = o3d.pipelines.registration.registration_icp(
+        source, target, distance_threshold, result_ransac.transformation,
+        o3d.pipelines.registration.TransformationEstimationForColoredICP())
+
+    # result = o3d.pipelines.registration.registration_icp(
+    #     source, target, distance_threshold, result_ransac.transformation,
+    #     o3d.pipelines.registration.TransformationEstimationPointToPlane())
+        
     return result
+
+def refine_registration_colored(source, target, result_ransac):
+    voxel_radius = [0.04, 0.02, 0.01]
+    max_iter = [50, 30, 14]
+    current_transformation = result_ransac
+    print("3. Colored point cloud registration")
+    for scale in range(3):
+        iter = max_iter[scale]
+        radius = voxel_radius[scale]
+        print([iter, radius, scale])
+
+        print("3-1. Downsample with a voxel size %.2f" % radius)
+        source_down = source.voxel_down_sample(radius)
+        target_down = target.voxel_down_sample(radius)
+
+        print("3-2. Estimate normal.")
+        source_down.estimate_normals(
+            o3d.geometry.KDTreeSearchParamHybrid(radius=radius * 2, max_nn=30))
+        target_down.estimate_normals(
+            o3d.geometry.KDTreeSearchParamHybrid(radius=radius * 2, max_nn=30))
+
+        print("3-3. Applying colored point cloud registration")
+        result_icp = o3d.pipelines.registration.registration_colored_icp(
+            source_down, target_down, radius, current_transformation,
+            o3d.pipelines.registration.TransformationEstimationForColoredICP(),
+            o3d.pipelines.registration.ICPConvergenceCriteria(relative_fitness=1e-6,
+                                                            relative_rmse=1e-6,
+                                                            max_iteration=iter))
+        current_transformation = result_icp.transformation
+    return result_icp
 
 def execute_fast_global_registration(source_down, target_down, source_fpfh,
                                      target_fpfh, voxel_size):
@@ -161,6 +201,7 @@ if __name__ == "__main__":
     SAVE_PCD = False
     SAVE_REGISTRATION = False
     NORMALIZATION = True
+    ICP_METHOD = "icp_colored" # or "icp_tandard"
     
     pcd_reconstruction = o3d.io.read_point_cloud(path_reconstruction[-1])
     #mesh_reconstruction = o3d.io.read_triangle_mesh(path_reconstruction[-1])
@@ -245,8 +286,11 @@ if __name__ == "__main__":
 
         if SAVE_REGISTRATION:
             save_registration_result(source_down, target_down, result_ransac.transformation, "/home/biyang/Documents/results/global_registration.ply")
-        result_icp = refine_registration(source, target, result_ransac,
-                                    voxel_size)
+        if ICP_METHOD == "icp_standard":
+            result_icp = refine_registration(source, target, result_ransac,
+                                        voxel_size)
+        elif ICP_METHOD == "icp_colored":
+            result_icp = refine_registration_colored(source, target, result_ransac)
         print(result_icp)
         if SAVE_REGISTRATION:
             save_registration_result(source, target, result_icp.transformation, "/home/biyang/Documents/results/local_refinement.ply")
