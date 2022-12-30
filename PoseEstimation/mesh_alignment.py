@@ -10,7 +10,7 @@ def normalize_pc(points):
 	centroid = np.mean(points, axis=0)
 	points -= centroid
 	furthest_distance = np.max(np.sqrt(np.sum(abs(points)**2,axis=-1)))
-	points /= (furthest_distance*10)
+	points /= furthest_distance
 
 	return points, centroid, furthest_distance
 
@@ -61,8 +61,8 @@ def preprocess_point_cloud(pcd, voxel_size):
 def draw_registration_result(source, target, transformation):
     source_temp = copy.deepcopy(source)
     target_temp = copy.deepcopy(target)
-    source_temp.paint_uniform_color([1, 0.706, 0])
-    target_temp.paint_uniform_color([0, 0.651, 0.929])
+    # source_temp.paint_uniform_color([1, 0.706, 0])
+    # target_temp.paint_uniform_color([0, 0.651, 0.929])
     source_temp.transform(transformation)
     o3d.visualization.draw_geometries([source_temp, target_temp])
     # o3d.visualization.draw_geometries([source_temp, target_temp],
@@ -106,7 +106,7 @@ def execute_global_registration(source_down, target_down, source_fpfh,
         source_down, target_down, source_fpfh, target_fpfh, True,
         distance_threshold,
         o3d.pipelines.registration.TransformationEstimationPointToPoint(with_scaling = False),3, \
-            [o3d.pipelines.registration.CorrespondenceCheckerBasedOnEdgeLength(0.9),
+            [o3d.pipelines.registration.CorrespondenceCheckerBasedOnEdgeLength(0.5),
             o3d.pipelines.registration.CorrespondenceCheckerBasedOnDistance(distance_threshold)
         ], o3d.pipelines.registration.RANSACConvergenceCriteria(100000, 0.999))
     return result
@@ -148,8 +148,8 @@ def refine_registration(source, target, result_ransac, voxel_size):
     return result
 
 def refine_registration_multiscale(source, target, result_ransac):
-    voxel_radius = [0.04, 0.01, 0.0025]
-    max_iter = [50, 30, 14]
+    voxel_radius = [0.02, 0.01, 0.005]
+    max_iter = [200, 100, 20]
     current_transformation = result_ransac.transformation
     print("3. Colored point cloud registration")
     for scale in range(3):
@@ -161,7 +161,7 @@ def refine_registration_multiscale(source, target, result_ransac):
         source_down = source.voxel_down_sample(radius)
         target_down = target.voxel_down_sample(radius)
 
-        print("3-2. Estimate normal.")
+        print("3-2. Estimate normal.")  
         source_down.estimate_normals(
             o3d.geometry.KDTreeSearchParamHybrid(radius=radius * 2, max_nn=30))
         target_down.estimate_normals(
@@ -175,13 +175,14 @@ def refine_registration_multiscale(source, target, result_ransac):
         #                                                     relative_rmse=1e-6,
         #                                                     max_iteration=iter))
 
+        
         result_icp = o3d.pipelines.registration.registration_icp(
             source_down, target_down, radius, current_transformation,
             o3d.pipelines.registration.TransformationEstimationPointToPlane(),
-            o3d.pipelines.registration.ICPConvergenceCriteria(relative_fitness=1e-6,
-                                                            relative_rmse=1e-6,
+            o3d.pipelines.registration.ICPConvergenceCriteria(relative_fitness=1e-9,
+                                                            relative_rmse=1e-9,
                                                             max_iteration=iter))
-                                                            
+                               
         current_transformation = result_icp.transformation
     return result_icp
 
@@ -200,7 +201,7 @@ if __name__ == "__main__":
     ARKitSceneDataID = "40777060"
     if platform == "linux" or platform == "linux2":  
     # linux
-        path_reconstruction = glob("/home/biyang/Documents/3D_Gaze/Colmap/" + ARKitSceneDataID + "/output/*/fused.ply")
+        path_reconstruction = glob("/home/biyang/Documents/3D_Gaze/Colmap/" + ARKitSceneDataID + "/output/*/meshed-poisson.ply")
         path_gt = glob("/home/biyang/Documents/3D_Gaze/Colmap/" + ARKitSceneDataID + "/gt/*.ply")
 
     elif platform == "win32":
@@ -216,14 +217,14 @@ if __name__ == "__main__":
     NORMALIZATION = True
     ICP_METHOD = "icp_standard" # or "icp_standard"
     
-    pcd_reconstruction = o3d.io.read_point_cloud(path_reconstruction[-1])
-    #mesh_reconstruction = o3d.io.read_triangle_mesh(path_reconstruction[-1])
+    #pcd_reconstruction = o3d.io.read_point_cloud(path_reconstruction[-1])
+    mesh_reconstruction = o3d.io.read_triangle_mesh(path_reconstruction[-1])
     mesh_gt = o3d.io.read_triangle_mesh(path_gt[-1])
 
     #number_of_points = len(pcd_reconstruction.points)
     number_of_points = 500000
     pcd_sample = sample_pc(mesh_gt, number_of_points)
-    #pcd_reconstruction = sample_pc(mesh_reconstruction, number_of_points)
+    pcd_reconstruction = sample_pc(mesh_reconstruction, number_of_points)
 
     if SAVE_PCD:
 
@@ -233,21 +234,21 @@ if __name__ == "__main__":
 
     if NORMALIZATION:
         points_sample = np.asarray(pcd_sample.points)
-        normalized_points_sample, _, _ = normalize_pc(points_sample)
+        normalized_points_sample, _, normalize_factor_sample = normalize_pc(points_sample)
         pcd_sample.points = o3d.utility.Vector3dVector(normalized_points_sample)
 
         points_reconstruction = np.asarray(pcd_reconstruction.points)
-        normalized_points_reconstruction, _, _ = normalize_pc(points_reconstruction)
+        normalized_points_reconstruction, _, normalize_factor_reconstruction = normalize_pc(points_reconstruction)
         pcd_reconstruction.points = o3d.utility.Vector3dVector(normalized_points_reconstruction)
 
         #o3d.visualization.draw_geometries([pcd_reconstruction, pcd_sample])
         #draw_registration_result(pcd_sample, pcd_reconstruction, np.eye(4))
 
-
     ## Prescaling is useful, but it is not enough only with normalization
-    # pcd_reconstruction_scaled = copy.deepcopy(pcd_reconstruction)
-    # pcd_reconstruction_scaled.scale(1.5, center=pcd_reconstruction_scaled.get_center())
-    # pcd_reconstruction = copy.deepcopy(pcd_reconstruction_scaled)
+    additional_scale_factor = normalize_factor_reconstruction / normalize_factor_sample
+    pcd_reconstruction_scaled = copy.deepcopy(pcd_reconstruction)
+    pcd_reconstruction_scaled.scale(0.4508734833211593 * additional_scale_factor, center=pcd_reconstruction_scaled.get_center())
+    pcd_reconstruction = copy.deepcopy(pcd_reconstruction_scaled)
 
     # draw_registration_result(pcd_sample, pcd_reconstruction, np.eye(4))
 

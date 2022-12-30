@@ -128,7 +128,7 @@ def transform_to_world(R_1_gt, T_1_gt, R_rel, T_rel):
     return R_est, T_est
     
 if __name__ == "__main__":
-    ARKitSceneDataID = "41069042"
+    ARKitSceneDataID = "40777060"
     if platform == "linux" or platform == "linux2":  
     # linux
         #txt_filepath= '/home/biyang/Documents/3D_Gaze/Colmap/output/images.txt'
@@ -234,18 +234,23 @@ if __name__ == "__main__":
         translation_estimate.append(translation_est)
 
 
-    # Simple Test for scaling the translation vector back
-    # distance = 0
-    # for tran_est, pose in zip(translation_estimate, pose_gt_reorder):
+    # Find the scale using the distance between cam position
+    came_id = [1, int(len(image_id) / 4), int(len(image_id) / 2), int(3*len(image_id) / 4), -2]
 
-    #     tran_gt = pose[:3, 3].reshape(3, 1)
-    #     distance += np.linalg.norm(tran_gt) / np.linalg.norm(tran_est)
+    scale_accumulated = 0
+    for id in came_id:
+        distance_reconstruction = np.linalg.norm(translation_estimate[0] - translation_estimate[id])
+        translation_gt = np.array(pose_gt_reorder[id][:3, 3]).reshape(3, 1)
+        distance_gt = np.linalg.norm(translation_1_gt -translation_gt)
 
-    # scale = distance / len(pose_gt_reorder)
-    # print(scale, distance)
+        scale_accumulated += distance_gt / distance_reconstruction
+    
+    scale_ratio = scale_accumulated / len(came_id)
+
+    print("Scale ratio is ", scale_ratio)
 
     for i in range(len(translation_estimate)):
-        translation_estimate[i] = translation_estimate[i] * scale
+        translation_estimate[i] = translation_estimate[i] * scale_ratio
 
     # Calculate the Error
     rot_error = []
@@ -264,15 +269,14 @@ if __name__ == "__main__":
     # print(pose_gt_reorder[1])
     # print(est_extrinsic)
 
-    print(sum(np.array(rot_error)>10))
-    print(sum(np.array(tran_error)>2))
-
+    print(sum(np.array(rot_error)>2))
+    print(sum(np.array(tran_error)>0.6))
     if VISUALIZATION:
         bounds = mesh_gt.bounding_box.bounds
         corners = trimesh.bounds.corners(bounds)
 
         #np.random.seed(1)
-        num_vis = 5
+        num_vis = 10
         vis_choices = np.random.choice(len(image_id), num_vis)
 
         visualizer = SimpleCameraPoseVisualizer([-10, 10], [-10, 10], [-5, 5])
