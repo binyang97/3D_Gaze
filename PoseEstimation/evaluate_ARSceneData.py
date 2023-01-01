@@ -128,7 +128,7 @@ def transform_to_world(R_1_gt, T_1_gt, R_rel, T_rel):
     return R_est, T_est
     
 if __name__ == "__main__":
-    ARKitSceneDataID = "40777060"
+    ARKitSceneDataID = "41069042"
     if platform == "linux" or platform == "linux2":  
     # linux
         #txt_filepath= '/home/biyang/Documents/3D_Gaze/Colmap/output/images.txt'
