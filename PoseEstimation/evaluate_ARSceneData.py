@@ -136,7 +136,7 @@ if __name__ == "__main__":
         txt_filepath.sort()
     elif platform == "win32":
     # Windows...
-        txt_filepath = 'D:/Documents/Semester_Project/Colmap_Test/Output/images.txt'
+        txt_filepath = glob('D:/Documents/Semester_Project/Colmap_Test/' + ARKitSceneDataID + '/Output/images.txt')
 
     VISUALIZATION = True
     SCALEBACK = True

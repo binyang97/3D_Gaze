@@ -206,8 +206,8 @@ if __name__ == "__main__":
 
     elif platform == "win32":
     # Windows...
-        path_gt = glob("D:/Documents/Semester_Project/Colmap_Test/GT/*.ply")
-        path_reconstruction = glob("D:/Documents/Semester_Project/Colmap_Test/Output/fused.ply")
+        path_gt = glob('D:/Documents/Semester_Project/Colmap_Test/' + ARKitSceneDataID + '/GT/*.ply')
+        path_reconstruction = glob('D:/Documents/Semester_Project/Colmap_Test/' + ARKitSceneDataID + '/Output/meshed-poisson.ply')
 
     ALIGNMENT = True
     FILTERING = False
@@ -216,7 +216,7 @@ if __name__ == "__main__":
     SAVE_REGISTRATION = False
     NORMALIZATION = False
     ICP_METHOD = "icp_standard" # or "icp_standard"
-    SCALING = False
+    SCALING = True
     
     #pcd_reconstruction = o3d.io.read_point_cloud(path_reconstruction[-1])
     mesh_reconstruction = o3d.io.read_triangle_mesh(path_reconstruction[-1])
