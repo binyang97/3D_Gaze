@@ -5,6 +5,7 @@ import open3d as o3d
 from sys import platform
 from glob import glob
 import copy
+from scipy.spatial.transform import Rotation as R
 
 def normalize_pc(points):
 	centroid = np.mean(points, axis=0)
@@ -216,16 +217,28 @@ if __name__ == "__main__":
     SAVE_REGISTRATION = False
     NORMALIZATION = False
     ICP_METHOD = "icp_standard" # or "icp_standard"
-    SCALING = True
+    SCALING = False
     
     #pcd_reconstruction = o3d.io.read_point_cloud(path_reconstruction[-1])
     mesh_reconstruction = o3d.io.read_triangle_mesh(path_reconstruction[-1])
     mesh_gt = o3d.io.read_triangle_mesh(path_gt[-1])
 
+
     #number_of_points = len(pcd_reconstruction.points)
     number_of_points = 500000
     pcd_sample = sample_pc(mesh_gt, number_of_points)
     pcd_reconstruction = sample_pc(mesh_reconstruction, number_of_points)
+
+    ## Test for gt scale
+    # r = R.from_quat([0, 0, np.sin(np.pi/4), np.cos(np.pi/4)])
+    # T_random = np.array([[1], [1.5], [2.5]])
+    # trans_random = np.concatenate(
+    #                     [np.concatenate([r.as_matrix(), T_random], axis=1), np.array([[0, 0, 0, 1]])], axis=0)
+    # pcd_reconstruction = sample_pc(mesh_gt, 200000)
+    
+    # pcd_reconstruction.transform(trans_random)
+
+    # o3d.visualization.draw_geometries([pcd_reconstruction, pcd_sample])
 
     if SAVE_PCD:
 
