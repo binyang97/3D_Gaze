@@ -215,9 +215,9 @@ if __name__ == "__main__":
     FAST = False
     SAVE_PCD = False
     SAVE_REGISTRATION = False
-    NORMALIZATION = False
+    NORMALIZATION = True
     ICP_METHOD = "icp_standard" # or "icp_standard"
-    SCALING = False
+    SCALING = True
     
     #pcd_reconstruction = o3d.io.read_point_cloud(path_reconstruction[-1])
     mesh_reconstruction = o3d.io.read_triangle_mesh(path_reconstruction[-1])
@@ -294,7 +294,7 @@ if __name__ == "__main__":
 
     if ALIGNMENT:
 
-        voxel_size = 0.4
+        voxel_size = 0.05
         source, target, source_down, target_down, source_fpfh, target_fpfh = prepare_dataset(pcd_reconstruction, pcd_sample, voxel_size)
 
         #o3d.visualization.draw_geometries([source_down, target_down])

@@ -8,8 +8,11 @@ import copy
 from scipy.spatial.transform import Rotation as R
 
 
+'''The script is for the mesh alignment task. 
+   The pipeline is mainly based on the built-in functions of open3d'''
+
 class MeshAlignment:
-    def __init__(self, source, target, num_points, voxel_size = 0.05, scaling = False, normalization = True):
+    def __init__(self, source, target, num_points, voxel_size = 0.05, icp_method = "standard", scaling = False, normalization = True, filtering = False):
         self.source_mesh = source
         self.target_mesh = target
         self.voxel_size = voxel_size
@@ -22,6 +25,15 @@ class MeshAlignment:
 
         # The number of points sampled from the mesh
         self.num_points = num_points
+
+        # If point cloud is need to filtered
+        self.filtering = filtering
+
+        # Which registration method is used: standard, multi-scale
+        self.icp_method = icp_method
+
+        self.scale_factor = 0.4508734833211593
+
 
 
     @staticmethod
@@ -84,6 +96,118 @@ class MeshAlignment:
             o3d.geometry.KDTreeSearchParamHybrid(radius=radius_feature, max_nn=100))
         return pcd_down, pcd_fpfh
 
+    @staticmethod
+    def filter_points(pcd):
+        print("Statistical oulier removal")
+        cl, ind = pcd.remove_statistical_outlier(nb_neighbors=30,
+                                                            std_ratio=0.2)
+        return cl
+
+    '''This function is actually not used'''
+    @staticmethod 
+    def execute_fast_global_registration(source_down, target_down, source_fpfh,
+                                     target_fpfh, voxel_size):
+        distance_threshold = voxel_size * 0.5
+        print(":: Apply fast global registration with distance threshold %.3f" \
+                % distance_threshold)
+        result = o3d.pipelines.registration.registration_fgr_based_on_feature_matching(
+            source_down, target_down, source_fpfh, target_fpfh,
+            o3d.pipelines.registration.FastGlobalRegistrationOption(
+                maximum_correspondence_distance=distance_threshold))
+        return result
+
+    @staticmethod
+    def execute_global_registration(source_down, target_down, source_fpfh,
+                                target_fpfh, voxel_size):
+        distance_threshold = voxel_size * 1.5
+        print(":: RANSAC registration on downsampled point clouds.")
+        print("   Since the downsampling voxel size is %.3f," % voxel_size)
+        print("   we use a liberal distance threshold %.3f." % distance_threshold)
+        result = o3d.pipelines.registration.registration_ransac_based_on_feature_matching(
+            source_down, target_down, source_fpfh, target_fpfh, True,
+            distance_threshold,
+            o3d.pipelines.registration.TransformationEstimationPointToPoint(with_scaling = False),3, \
+                [o3d.pipelines.registration.CorrespondenceCheckerBasedOnEdgeLength(0.9),
+                o3d.pipelines.registration.CorrespondenceCheckerBasedOnDistance(distance_threshold)
+            ], o3d.pipelines.registration.RANSACConvergenceCriteria(100000, 0.999))
+        return result
+
+    @staticmethod
+    def refine_registration_multiscale(source, target, result_ransac):
+        voxel_radius = [0.02, 0.01, 0.005]
+        max_iter = [200, 100, 20]
+        current_transformation = result_ransac.transformation
+        print("3. Colored point cloud registration")
+        for scale in range(3):
+            iter = max_iter[scale]
+            radius = voxel_radius[scale]
+            print([iter, radius, scale])
+
+            print("3-1. Downsample with a voxel size %.2f" % radius)
+            source_down = source.voxel_down_sample(radius)
+            target_down = target.voxel_down_sample(radius)
+
+            print("3-2. Estimate normal.")  
+            source_down.estimate_normals(
+                o3d.geometry.KDTreeSearchParamHybrid(radius=radius * 2, max_nn=30))
+            target_down.estimate_normals(
+                o3d.geometry.KDTreeSearchParamHybrid(radius=radius * 2, max_nn=30))
+
+            print("3-3. Applying colored point cloud registration")
+            # result_icp = o3d.pipelines.registration.registration_colored_icp(
+            #     source_down, target_down, radius, current_transformation,
+            #     o3d.pipelines.registration.TransformationEstimationForColoredICP(),
+            #     o3d.pipelines.registration.ICPConvergenceCriteria(relative_fitness=1e-6,
+            #                                                     relative_rmse=1e-6,
+            #                                                     max_iteration=iter))
+            
+            result_icp = o3d.pipelines.registration.registration_icp(
+                source_down, target_down, radius, current_transformation,
+                o3d.pipelines.registration.TransformationEstimationPointToPlane(),
+                o3d.pipelines.registration.ICPConvergenceCriteria(relative_fitness=1e-9,
+                                                                relative_rmse=1e-9,
+                                                                max_iteration=iter))
+                                
+            current_transformation = result_icp.transformation
+        return result_icp
+
+    @staticmethod
+    def refine_registration(source, target, result_ransac, voxel_size):
+        distance_threshold = voxel_size * 0.4
+        print(":: Point-to-plane ICP registration is applied on original point")
+        print("   clouds to refine the alignment. This time we use a strict")
+        print("   distance threshold %.3f." % distance_threshold)
+        # result = o3d.pipelines.registration.registration_icp(
+        #     source, target, distance_threshold, result_ransac.transformation,
+        #     o3d.pipelines.registration.TransformationEstimationPointToPlane())
+
+        # Built-in function for computing normals for pcd
+        radius_normal = voxel_size * 2
+        source.estimate_normals(search_param = o3d.geometry.KDTreeSearchParamHybrid( radius = radius_normal, max_nn = 30))
+        target.estimate_normals(search_param = o3d.geometry.KDTreeSearchParamHybrid( radius = radius_normal, max_nn = 30))
+
+        ## Point-to-Plane 
+        result = o3d.pipelines.registration.registration_icp(
+            source, target, distance_threshold, result_ransac.transformation,
+            o3d.pipelines.registration.TransformationEstimationPointToPlane())
+        
+        ## Colored ICP
+        # result = o3d.pipelines.registration.registration_icp(
+        #     source, target, distance_threshold, result_ransac.transformation,
+        #     o3d.pipelines.registration.TransformationEstimationPointToPoint())
+
+        ## Generalized ICP
+        # result = o3d.pipelines.registration.registration_generalized_icp(
+        #     source, target, distance_threshold, result_ransac.transformation,
+        #     o3d.pipelines.registration.TransformationEstimationForGeneralizedICP())
+
+        ## Point-to-Point
+        # result = o3d.pipelines.registration.registration_icp(
+        #     source, target, distance_threshold, result_ransac.transformation,
+        #     o3d.pipelines.registration.TransformationEstimationPointToPoint())
+            
+        return result
+
     def normalize_pc(self):
         points_target = np.asarray(self.target.points)
         normalized_points_target, _, normalize_factor_target = self.normalize_points(points_target)
@@ -97,25 +221,58 @@ class MeshAlignment:
 
     def prepare_dataset(self):
         print(":: Sample point clouds from two meshes")
-        self.source = self.sample_pc(self.source_mesh)
-        self.target = self.sample_pc(self.target_mesh)
+        self.source = self.sample_pc(self.source_mesh, self.num_points)
+        self.target = self.sample_pc(self.target_mesh, self.num_points)
+
+        if self.filtering:
+            print("Statistical oulier removal")
+            self.source = self.filter_points(self.source)
+            self.target = self.filter_points(self.target)
+        
         if self.normalization:
             print(":: Normalize point clouds")
             self.normalize_pc()
+            self.scale_factor *= self.additional_factor
+        self.source.scale(self.scale_factor, center=self.source.get_center())
 
         self.source_down, self.source_fpfh = self.preprocess_point_cloud(self.source, self.voxel_size)
         self.target_down, self.target_fpfh = self.preprocess_point_cloud(self.target, self.voxel_size)
 
-    def execute_global_registration(self):
-        distance_threshold = self.voxel_size * 1.5
-        print(":: RANSAC registration on downsampled point clouds.")
-        print("   Since the downsampling voxel size is %.3f," % self.voxel_size)
-        print("   we use a liberal distance threshold %.3f." % distance_threshold)
-        result = o3d.pipelines.registration.registration_ransac_based_on_feature_matching(
-            self.source_down, self.target_down, self.source_fpfh, self.target_fpfh, True,
-            distance_threshold,
-            o3d.pipelines.registration.TransformationEstimationPointToPoint(with_scaling = self.scaling),3, \
-                [o3d.pipelines.registration.CorrespondenceCheckerBasedOnEdgeLength(0.9),
-                o3d.pipelines.registration.CorrespondenceCheckerBasedOnDistance(distance_threshold)
-            ], o3d.pipelines.registration.RANSACConvergenceCriteria(100000, 0.999))
-        return result
+    def register(self):
+        self.prepare_dataset()
+        
+        self.result_ransac = self.execute_global_registration(self.source_down, self.target_down,
+                                                self.source_fpfh, self.target_fpfh,
+                                                self.voxel_size)
+
+        if self.icp_method == "standard":
+            self.result_icp = self.refine_registration(self.source, self.target, self.result_ransac, self.voxel_size)
+        elif self.icp_method == "multiscale":
+            self.result_icp = self.refine_registration_multiscale(self.source, self.target, self.result_ransac)
+        else:
+            raise NotImplementedError("Please check the name is given correctly")
+
+
+if __name__ == "__main__":
+    ARKitSceneDataID = "40777060"
+    if platform == "linux" or platform == "linux2":  
+    # linux
+        path_reconstruction = glob("/home/biyang/Documents/3D_Gaze/Colmap/" + ARKitSceneDataID + "/output/*/meshed-poisson.ply")
+        path_gt = glob("/home/biyang/Documents/3D_Gaze/Colmap/" + ARKitSceneDataID + "/gt/*.ply")
+
+    elif platform == "win32":
+    # Windows...
+        path_gt = glob('D:/Documents/Semester_Project/Colmap_Test/' + ARKitSceneDataID + '/GT/*.ply')
+        path_reconstruction = glob('D:/Documents/Semester_Project/Colmap_Test/' + ARKitSceneDataID + '/Output/meshed-poisson.ply')
+
+
+    mesh_reconstruction = o3d.io.read_triangle_mesh(path_reconstruction[-1])
+    mesh_gt = o3d.io.read_triangle_mesh(path_gt[-1])
+    num_points = 500000
+    Aligner = MeshAlignment(mesh_reconstruction, mesh_gt, num_points)
+
+    Aligner.register()
+    Aligner.draw_registration_result(Aligner.source_down, Aligner.target_down, Aligner.result_ransac.transformation)
+    print(Aligner.result_ransac)
+    print(Aligner.result_icp)
+    Aligner.draw_registration_result(Aligner.source, Aligner.target, Aligner.result_icp.transformation, colored=False)
