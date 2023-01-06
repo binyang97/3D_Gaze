@@ -11,6 +11,7 @@ import matplotlib as plt
 import random
 from glob import glob
 import re
+import os
 # load txt file
 
 #cameras_data = np.loadtxt('./Output/images.txt')
@@ -128,7 +129,7 @@ def transform_to_world(R_1_gt, T_1_gt, R_rel, T_rel):
     return R_est, T_est
     
 if __name__ == "__main__":
-    ARKitSceneDataID = "41069042"
+    ARKitSceneDataID = "40777060"
     if platform == "linux" or platform == "linux2":  
     # linux
         #txt_filepath= '/home/biyang/Documents/3D_Gaze/Colmap/output/images.txt'
@@ -141,14 +142,15 @@ if __name__ == "__main__":
     VISUALIZATION = True
     SCALEBACK = True
     image_id, camera_params, points_2D, point3D_IDs = rewrite_image_txt(txt_filepath[0])
+    print(txt_filepath[0])
 
-    for path in txt_filepath[1:]:
-        image_id_extend, camera_params_extend, points_2D_extend, point3D_IDs_extend = rewrite_image_txt(path)
+    # for path in txt_filepath[1:]:
+    #     image_id_extend, camera_params_extend, points_2D_extend, point3D_IDs_extend = rewrite_image_txt(path)
 
-        image_id = image_id + image_id_extend
-        camera_params = np.vstack([camera_params, camera_params_extend])
-        point3D_IDs = np.hstack([point3D_IDs,  point3D_IDs_extend])
-        points_2D = np.concatenate([points_2D, points_2D_extend], axis = 0)
+    #     image_id = image_id + image_id_extend
+    #     camera_params = np.vstack([camera_params, camera_params_extend])
+    #     point3D_IDs = np.hstack([point3D_IDs,  point3D_IDs_extend])
+    #     points_2D = np.concatenate([points_2D, points_2D_extend], axis = 0)
 
     #print(len(point3D_IDs))
     #print(points_2D[0][:10]
@@ -205,9 +207,21 @@ if __name__ == "__main__":
                 pose_frame_gt = pose_gt[str(float(frame_id)+0.001)]
         pose_gt_reorder.append(pose_frame_gt)
 
+    pose_gt_reorder = np.array(pose_gt_reorder)
+
+    # # Write a txt file for model_aligner with colmap 
+    # output_path = '/home/biyang/Documents/3D_Gaze/Colmap/' + ARKitSceneDataID
+    # with open(os.path.join(output_path, 'ref_images.txt'), 'w') as fp:
+    #     for i, item in enumerate(pose_gt_reorder):
+    #         # write each item on a new line
+    #         ref_image_data = list(item[:3,3])
+    #         ref_image_data.insert(0, image_id[i])
+    #         line = " ".join([str(elem) for elem in ref_image_data])
+    #         fp.write(line + "\n")
+    #     print('Done')
 
     # Conver the estimated relative pose to world coodinate with help of gt pose of the first frame
-    pose_gt_reorder = np.array(pose_gt_reorder)
+    
     # ARKitScenes provides the ground truth pose in form of camera --> world
     # Colmap outputs pose in form of world --> camera
     # The pose needs to be utilized in the same reference coordinate
@@ -269,8 +283,8 @@ if __name__ == "__main__":
     # print(pose_gt_reorder[1])
     # print(est_extrinsic)
 
-    print(sum(np.array(rot_error)>2))
-    print(sum(np.array(tran_error)>0.6))
+    print(sum(np.array(rot_error)>4))
+    print(sum(np.array(tran_error)>0.3))
     if VISUALIZATION:
         bounds = mesh_gt.bounding_box.bounds
         corners = trimesh.bounds.corners(bounds)

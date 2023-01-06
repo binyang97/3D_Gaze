@@ -12,7 +12,7 @@ from scipy.spatial.transform import Rotation as R
    The pipeline is mainly based on the built-in functions of open3d'''
 
 class MeshAlignment:
-    def __init__(self, source, target, num_points, voxel_size = 0.05, icp_method = "standard", scaling = False, normalization = True, filtering = False):
+    def __init__(self, source, target, num_points, scale_factor, voxel_size = 0.05, icp_method = "standard", scaling = False, normalization = True, filtering = False):
         self.source_mesh = source
         self.target_mesh = target
         self.voxel_size = voxel_size
@@ -32,7 +32,7 @@ class MeshAlignment:
         # Which registration method is used: standard, multi-scale
         self.icp_method = icp_method
 
-        self.scale_factor = 0.4508734833211593
+        self.scale_factor = scale_factor
 
 
 
@@ -135,7 +135,7 @@ class MeshAlignment:
     @staticmethod
     def refine_registration_multiscale(source, target, result_ransac):
         voxel_radius = [0.02, 0.01, 0.005]
-        max_iter = [200, 100, 20]
+        max_iter = [2000, 1000, 200]
         current_transformation = result_ransac.transformation
         print("3. Colored point cloud registration")
         for scale in range(3):
@@ -235,6 +235,7 @@ class MeshAlignment:
             self.scale_factor *= self.additional_factor
         self.source.scale(self.scale_factor, center=self.source.get_center())
 
+
         self.source_down, self.source_fpfh = self.preprocess_point_cloud(self.source, self.voxel_size)
         self.target_down, self.target_fpfh = self.preprocess_point_cloud(self.target, self.voxel_size)
 
@@ -257,7 +258,7 @@ if __name__ == "__main__":
     ARKitSceneDataID = "40777060"
     if platform == "linux" or platform == "linux2":  
     # linux
-        path_reconstruction = glob("/home/biyang/Documents/3D_Gaze/Colmap/" + ARKitSceneDataID + "/output/*/meshed-poisson.ply")
+        path_reconstruction = glob("/home/biyang/Documents/3D_Gaze/Colmap/" + ARKitSceneDataID + "/output/0/meshed-poisson.ply")
         path_gt = glob("/home/biyang/Documents/3D_Gaze/Colmap/" + ARKitSceneDataID + "/gt/*.ply")
 
     elif platform == "win32":
@@ -269,7 +270,7 @@ if __name__ == "__main__":
     mesh_reconstruction = o3d.io.read_triangle_mesh(path_reconstruction[-1])
     mesh_gt = o3d.io.read_triangle_mesh(path_gt[-1])
     num_points = 500000
-    Aligner = MeshAlignment(mesh_reconstruction, mesh_gt, num_points)
+    Aligner = MeshAlignment(mesh_reconstruction, mesh_gt, num_points, scale_factor = 0.4508734833211593, voxel_size=0.05, icp_method="multiscale")
 
     Aligner.register()
     Aligner.draw_registration_result(Aligner.source_down, Aligner.target_down, Aligner.result_ransac.transformation)

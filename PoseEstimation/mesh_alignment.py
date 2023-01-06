@@ -199,10 +199,10 @@ def execute_fast_global_registration(source_down, target_down, source_fpfh,
     return result
 
 if __name__ == "__main__":
-    ARKitSceneDataID = "40777060"
+    ARKitSceneDataID = "41069042"
     if platform == "linux" or platform == "linux2":  
     # linux
-        path_reconstruction = glob("/home/biyang/Documents/3D_Gaze/Colmap/" + ARKitSceneDataID + "/output/*/meshed-poisson.ply")
+        path_reconstruction = glob("/home/biyang/Documents/3D_Gaze/Colmap/" + ARKitSceneDataID + "/output/0/meshed-poisson.ply")
         path_gt = glob("/home/biyang/Documents/3D_Gaze/Colmap/" + ARKitSceneDataID + "/gt/*.ply")
 
     elif platform == "win32":
@@ -262,7 +262,7 @@ if __name__ == "__main__":
     ## Prescaling is useful, but it is not enough only with normalization
         additional_scale_factor = normalize_factor_reconstruction / normalize_factor_sample
         pcd_reconstruction_scaled = copy.deepcopy(pcd_reconstruction)
-        pcd_reconstruction_scaled.scale(0.4508734833211593 * additional_scale_factor, center=pcd_reconstruction_scaled.get_center())
+        pcd_reconstruction_scaled.scale(0.21080048006498844 * additional_scale_factor, center=pcd_reconstruction_scaled.get_center())
         pcd_reconstruction = copy.deepcopy(pcd_reconstruction_scaled)
 
     # draw_registration_result(pcd_sample, pcd_reconstruction, np.eye(4))
