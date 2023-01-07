@@ -233,7 +233,7 @@ class MeshAlignment:
             print(":: Normalize point clouds")
             self.normalize_pc()
             self.scale_factor *= self.additional_factor
-        self.source.scale(self.scale_factor, center=self.source.get_center())
+        self.source.scale(self.scale_factor, center=np.zeros(3))
 
 
         self.source_down, self.source_fpfh = self.preprocess_point_cloud(self.source, self.voxel_size)
