@@ -6,6 +6,7 @@ import copy
 from math import sqrt
 from sys import platform
 from glob import glob
+import trimesh
 
 def draw_registration_result(source, target, transformation, colored = True):
     source_temp = copy.deepcopy(source)
@@ -122,8 +123,8 @@ if __name__ == "__main__":
 
     extractor.compute_error()
 
-    VIS_KEYPOINTS = True
-    TEST = False
+    VIS_KEYPOINTS = False
+    TEST = True
 
     est_extrinsic = np.concatenate(
                     [np.concatenate([extractor.R_opt, extractor.t_opt.reshape(3, 1)], axis=1), np.array([[0, 0, 0, 1]])], axis=0)
@@ -155,9 +156,26 @@ if __name__ == "__main__":
     mesh_reconstruction = o3d.io.read_triangle_mesh(path_reconstruction[-1])
     mesh_gt = o3d.io.read_triangle_mesh(path_gt[-1])
 
+    rc_colors = mesh_reconstruction.vertex_colors
+    rc_new_colors = np.flip(np.array(rc_colors), 1)
+
+    mesh_reconstruction.vertex_colors = o3d.utility.Vector3dVector(rc_new_colors)
+
+
     if TEST:
         mesh_reconstruction.scale(extractor.s_opt, center = np.zeros(3))
         draw_registration_result(mesh_reconstruction, mesh_gt, est_extrinsic, colored=False)
+
+
+
+    # mesh_reconstruction = trimesh.load_mesh(path_reconstruction[-1])
+    # mesh_gt = trimesh.load_mesh(path_gt[-1])
+
+    # scene = mesh_reconstruction.scene()
+    # scene.add_geometry(mesh_gt)
+
+
+    # scene.show()
 
 
 

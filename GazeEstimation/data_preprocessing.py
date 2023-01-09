@@ -33,8 +33,7 @@ class DataPreprocessor:
     def __export_info__(self):
         export_info_path = os.path.join(datapath, 'export_info.csv')
         if not os.path.exists(export_info_path):
-            raise FileNotFoundError('Cannot find export_info.csv, \
-                                    please check the given filepath is correct or the file is correctly exported from Pupil Player')
+            raise FileNotFoundError('Cannot find export_info.csv, please check the given filepath is correct or the file is correctly exported from Pupil Player')
 
         info_df = pd.read_csv(export_info_path)
 
@@ -51,8 +50,7 @@ class DataPreprocessor:
     def __get_timestamps__ (self):
         timestamps_path = os.path.join(datapath, 'world_timestamps.csv')
         if not os.path.exists(timestamps_path):
-            raise FileNotFoundError('Cannot find world_timestamps.csv, \
-                                    please check the given filepath is correct or the file is correctly exported from Pupil Player')
+            raise FileNotFoundError('Cannot find world_timestamps.csv, please check the given filepath is correct or the file is correctly exported from Pupil Player')
 
         ts_df = pd.read_csv(timestamps_path)
         self.world_ts = ts_df.iloc[:,0].values
@@ -67,8 +65,7 @@ class DataPreprocessor:
     def __get_gaze__(self):
         gaze_path = os.path.join(datapath, 'gaze_positions.csv')
         if not os.path.exists(gaze_path):
-            raise FileNotFoundError('Cannot find gaze_positions.csv, \
-                                    please check the given filepath is correct or the file is correctly exported from Pupil Player')
+            raise FileNotFoundError('Cannot find gaze_positions.csv, please check the given filepath is correct or the file is correctly exported from Pupil Player')
 
         gaze_df = pd.read_csv(gaze_path)
         self.gaze_df = gaze_df.dropna(axis=1, how = "all")
@@ -81,8 +78,7 @@ class DataPreprocessor:
         if not os.path.exists(save_image_path):
             os.makedirs(save_image_path)
         if not os.path.exists(video_path):
-            raise FileNotFoundError('Cannot find world.mp4, \
-                                    please check the given filepath is correct or the file is correctly exported from Pupil Player')
+            raise FileNotFoundError('Cannot find world.mp4, please check the given filepath is correct or the file is correctly exported from Pupil Player')
         
         vid = cv2.VideoCapture(video_path)
 
@@ -135,7 +131,8 @@ class DataPreprocessor:
 if __name__ == "__main__":
     if platform == "linux" or platform == "linux2":  
     # linux
-        pass
+        datapath = r"/home/biyang/Documents/3D_Gaze/dataset/PupilInvisible/raw_data/2021-05-20-15-19-08/exports/000"
+        output_path = r"/home/biyang/Documents/3D_Gaze/dataset/PupilInvisible/room1"
 
     elif platform == "win32":
     # Windows...
