@@ -97,14 +97,24 @@ class DataPreprocessor:
     def extract_gaze(self):
 
         self.gaze_dict = {}
+       
         for i, timestamp in enumerate(self.world_ts):
             filtered_df = self.gaze_df[self.gaze_df['world_index'] == (i + self.startid)]
             filtered_gaze_ts = np.array(filtered_df.iloc[:,0].values)
-            
-            target_idx = find_nearest(filtered_gaze_ts, timestamp)
-            gaze_info = filtered_df.iloc[target_idx]
 
-            assert gaze_info['world_index']-self.startid == i
+            if np.size(filtered_gaze_ts) == 0:
+                target_idx = find_nearest(np.array(self.gaze_df.iloc[:, 0].values), timestamp)
+                gaze_info = self.gaze_df.iloc[target_idx]
+                print(gaze_info)
+
+
+            else:
+                target_idx = find_nearest(filtered_gaze_ts, timestamp)
+                gaze_info = filtered_df.iloc[target_idx]
+            
+            
+
+            #assert gaze_info['world_index']-self.startid == i
 
             
             #gaze_info.dropna().reset_index(drop=True)
@@ -136,8 +146,8 @@ if __name__ == "__main__":
 
     elif platform == "win32":
     # Windows...
-        datapath = r"D:\Documents\Semester_Project\3D_Gaze\dataset\PupilInvisible\raw_data\2021-05-20-15-19-08\exports\000"
-        output_path = r"D:\Documents\Semester_Project\3D_Gaze\dataset\PupilInvisible"
+        datapath = r"D:\Documents\Semester_Project\3D_Gaze\dataset\PupilInvisible\raw_data\2023-01-10-23-37-12\exports\000"
+        output_path = r"D:\Documents\Semester_Project\3D_Gaze\dataset\PupilInvisible/room1_v2"
 
     
 
@@ -150,6 +160,6 @@ if __name__ == "__main__":
 
     
     data = DataPreprocessor(datapath, output_path)
-    data.extract_gaze()
+    #data.extract_gaze()
     data.extract_frames()
     
