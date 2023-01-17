@@ -6,8 +6,11 @@ from sys import platform
 from glob import glob
 import copy
 from scipy.spatial.transform import Rotation as R
+import json
+from evaluate import *
 
 
+# The file is substituted  with mesh_alignment.py
 '''The script is for the mesh alignment task. 
    The pipeline is mainly based on the built-in functions of open3d'''
 
@@ -210,14 +213,23 @@ class MeshAlignment:
 
     def normalize_pc(self):
         points_target = np.asarray(self.target.points)
-        normalized_points_target, _, normalize_factor_target = self.normalize_points(points_target)
+        normalized_points_target, centroid_gt, normalize_factor_target = self.normalize_points(points_target)
         self.target.points = o3d.utility.Vector3dVector(normalized_points_target)
 
         points_reconstruction = np.asarray(self.source.points)
-        normalized_points_reconstruction, _, normalize_factor_reconstruction = self.normalize_points(points_reconstruction)
+        normalized_points_reconstruction, centroid_rc, normalize_factor_reconstruction = self.normalize_points(points_reconstruction)
         self.source.points = o3d.utility.Vector3dVector(normalized_points_reconstruction)
 
         self.additional_factor = normalize_factor_reconstruction/ normalize_factor_target
+
+
+        # Parameters for recorvering the normalization and scaling effect for evalutation of translation vector
+
+        self.delta_tran = centroid_gt - centroid_rc * self.scale_factor
+        self.backward_factor = normalize_factor_target
+        self.centroid_gt = centroid_gt
+        self.centroid_rc = centroid_rc
+
 
     def prepare_dataset(self):
         print(":: Sample point clouds from two meshes")
@@ -232,8 +244,12 @@ class MeshAlignment:
         if self.normalization:
             print(":: Normalize point clouds")
             self.normalize_pc()
-            self.scale_factor *= self.additional_factor
-        self.source.scale(self.scale_factor, center=np.zeros(3))
+            scale_factor = self.scale_factor * self.additional_factor
+        
+        else:
+            scale_factor = self.scale_factor
+        self.source.scale(scale_factor, center=np.zeros(3))
+        #self.source.scale(scale_factor, center=self.source.get_center())
 
 
         self.source_down, self.source_fpfh = self.preprocess_point_cloud(self.source, self.voxel_size)
@@ -266,14 +282,46 @@ if __name__ == "__main__":
         path_gt = glob('D:/Documents/Semester_Project/Colmap_Test/' + ARKitSceneDataID + '/GT/*.ply')
         path_reconstruction = glob('D:/Documents/Semester_Project/Colmap_Test/' + ARKitSceneDataID + '/Output/meshed-poisson.ply')
 
+        path_gt_transformation = 'D:/Documents/Semester_Project/Colmap_Test/' + ARKitSceneDataID + '/Output/gt_transformation.json'
+
 
     mesh_reconstruction = o3d.io.read_triangle_mesh(path_reconstruction[-1])
     mesh_gt = o3d.io.read_triangle_mesh(path_gt[-1])
     num_points = 500000
-    Aligner = MeshAlignment(mesh_reconstruction, mesh_gt, num_points, scale_factor = 0.4508734833211593, voxel_size=0.05, icp_method="multiscale")
+
+    # Load the ground truth transformation
+    with open(path_gt_transformation, 'r') as fp:
+        gt_transformation = json.load(fp)
+
+
+
+    Aligner = MeshAlignment(mesh_reconstruction, mesh_gt, num_points, scale_factor = gt_transformation['scale'], voxel_size=0.05, icp_method="standard")
 
     Aligner.register()
-    Aligner.draw_registration_result(Aligner.source_down, Aligner.target_down, Aligner.result_ransac.transformation)
+    #Aligner.draw_registration_result(Aligner.source_down, Aligner.target_down, Aligner.result_ransac.transformation)
     print(Aligner.result_ransac)
     print(Aligner.result_icp)
-    Aligner.draw_registration_result(Aligner.source, Aligner.target, Aligner.result_icp.transformation, colored=False)
+    #Aligner.draw_registration_result(Aligner.source, Aligner.target, Aligner.result_icp.transformation, colored=False)
+
+
+    
+    
+    rotError = rotation_error(np.array(gt_transformation['rotation']), Aligner.result_icp.transformation[:3, :3])
+    tranError = position_error(np.array(gt_transformation['translation']).reshape(3, 1), Aligner.result_icp.transformation[:3, 3].reshape(3, 1) * Aligner.backward_factor + Aligner.delta_tran.reshape(3, 1)) 
+
+    print(rotError, tranError)
+    
+
+    tran_new = Aligner.result_icp.transformation[:3, 3].reshape(3, 1) * Aligner.backward_factor + Aligner.delta_tran.reshape(3, 1)
+    est_new = np.concatenate(
+                    [np.concatenate([Aligner.result_icp.transformation[:3, :3], tran_new], axis=1), np.array([[0, 0, 0, 1]])], axis=0)
+
+    Aligner.target.scale(Aligner.backward_factor, center = Aligner.centroid_gt)
+    Aligner.draw_registration_result(mesh_reconstruction, Aligner.target, np.eye(4), colored=True)
+
+
+    print(Aligner.result_icp.transformation[:3, 3].reshape(3, 1) * Aligner.backward_factor + Aligner.delta_tran.reshape(3, 1))
+    print(np.array(gt_transformation['translation']).reshape(3, 1))
+    print(Aligner.result_icp.transformation[:3, 3].reshape(3, 1))
+    print(Aligner.backward_factor)
+    print(Aligner.delta_tran.reshape(3, 1))

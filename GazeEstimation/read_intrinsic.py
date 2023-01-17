@@ -55,42 +55,48 @@ if __name__ == "__main__":
         output_path = r"D:\Documents\Semester_Project\3D_Gaze\dataset\PupilInvisible\room1_v2\images_undistorted"
         intrinsic_path = r"D:\Documents\Semester_Project\3D_Gaze\dataset\PupilInvisible\raw_data\2023-01-10-23-37-12\world.intrinsics"
 
-
-    intrinsics = load_object(intrinsic_path)
-    print(intrinsics)
-
-
     VISUALIZATION = False
     SAVE = False
 
-    id = 20
-    pi_intrinsic = {
-        "resolution": [1088, 1080],
-        "dist_coefs": 
-                [
-                    -0.12390715699556255,
-                    0.09983010007937897,
-                    0.0013846287331131738,
-                    -0.00036539454816030264,
-                    0.020072404577046853,
-                    0.2052173022520547,
-                    0.009921380887245364,
-                    0.06631870205961587,
-                ]
-            ,
-        "camera_matrix": [
-                [766.2927454396544, 0.0, 543.6272327745995],
-                [0.0, 766.3976103393867, 566.0580149497666],
-                [0.0, 0.0, 1.0],
-            ],
-        "cam_type": "radial",
-        }
+    ## Intrinsics parameters are totally the same
 
-    mtx = np.array(pi_intrinsic['camera_matrix'])
-    dist = np.array(pi_intrinsic['dist_coefs'])
+    if os.path.exists(intrinsic_path):
+        intrinsics = load_object(intrinsic_path)
+        mtx = np.array(intrinsics['(1088, 1080)']['camera_matrix'])
+        dist = np.array(intrinsics['(1088, 1080)']['dist_coefs'])
 
+    else:
+    
+        pi_intrinsic = {
+            "resolution": [1088, 1080],
+            "dist_coefs": 
+                    [
+                        -0.12390715699556255,
+                        0.09983010007937897,
+                        0.0013846287331131738,
+                        -0.00036539454816030264,
+                        0.020072404577046853,
+                        0.2052173022520547,
+                        0.009921380887245364,
+                        0.06631870205961587,
+                    ]
+                ,
+            "camera_matrix": [
+                    [766.2927454396544, 0.0, 543.6272327745995],
+                    [0.0, 766.3976103393867, 566.0580149497666],
+                    [0.0, 0.0, 1.0],
+                ],
+            "cam_type": "radial",
+            }
+
+        mtx = np.array(pi_intrinsic['camera_matrix'])
+        dist = np.array(pi_intrinsic['dist_coefs'])
+
+
+    
     img_files = os.listdir(pi_imagepath)
     
+    id = 20
 
     if VISUALIZATION:
         img = cv2.imread(os.path.join(pi_imagepath, img_files[id]),1) 
