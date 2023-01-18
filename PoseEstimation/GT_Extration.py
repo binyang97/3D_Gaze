@@ -141,8 +141,9 @@ if __name__ == "__main__":
     # linux
         path_reconstruction = glob("/home/biyang/Documents/3D_Gaze/Colmap/" + ARKitSceneDataID + "/output/0/meshed-poisson.ply")
         path_gt = glob("/home/biyang/Documents/3D_Gaze/Colmap/" + ARKitSceneDataID + "/gt/*.ply")
-        path_json_gt = "/home/biyang/Documents/3D_Gaze/Colmap/40777060/pointcloud/gt_100000.json"
-        path_json_rc = "/home/biyang/Documents/3D_Gaze/Colmap/40777060/pointcloud/reconstruction_100000.json"
+        path_json_gt = "/home/biyang/Documents/3D_Gaze/Colmap/40777060/pointcloud/gt_100000_13points.json"
+        path_json_rc = "/home/biyang/Documents/3D_Gaze/Colmap/40777060/pointcloud/reconstruction_100000_13points.json"
+        output_path = "/home/biyang/Documents/3D_Gaze/Colmap/" + ARKitSceneDataID + "/output/"
 
     elif platform == "win32":
     # Windows...

@@ -61,12 +61,19 @@ class MeshAlignment:
         return points, centroid, furthest_distance
 
     @staticmethod
-    def draw_registration_result(source, target, transformation, colored = True):
+    def draw_registration_result(source, target, transformation, colored = True, inverse = False):
         source_temp = copy.deepcopy(source)
         target_temp = copy.deepcopy(target)
         if colored:
             source_temp.paint_uniform_color([1, 0.706, 0])
             target_temp.paint_uniform_color([0, 0.651, 0.929])
+
+        if inverse and not colored:
+            colors = source_temp.vertex_colors
+            new_colors = np.flip(np.array(colors), 1)
+
+            source_temp.vertex_colors = o3d.utility.Vector3dVector(new_colors)
+
         source_temp.transform(transformation)
         o3d.visualization.draw_geometries([source_temp, target_temp])
 
@@ -224,8 +231,6 @@ class MeshAlignment:
 
 
         # Parameters for recorvering the normalization and scaling effect for evalutation of translation vector
-
-        self.delta_tran = centroid_gt - centroid_rc * self.scale_factor
         self.backward_factor = normalize_factor_target
         self.centroid_gt = centroid_gt
         self.centroid_rc = centroid_rc
@@ -276,6 +281,7 @@ if __name__ == "__main__":
     # linux
         path_reconstruction = glob("/home/biyang/Documents/3D_Gaze/Colmap/" + ARKitSceneDataID + "/output/0/meshed-poisson.ply")
         path_gt = glob("/home/biyang/Documents/3D_Gaze/Colmap/" + ARKitSceneDataID + "/gt/*.ply")
+        path_gt_transformation = "/home/biyang/Documents/3D_Gaze/Colmap/" + ARKitSceneDataID + '/output/gt_transformation.json'
 
     elif platform == "win32":
     # Windows...
@@ -301,27 +307,24 @@ if __name__ == "__main__":
     #Aligner.draw_registration_result(Aligner.source_down, Aligner.target_down, Aligner.result_ransac.transformation)
     print(Aligner.result_ransac)
     print(Aligner.result_icp)
-    #Aligner.draw_registration_result(Aligner.source, Aligner.target, Aligner.result_icp.transformation, colored=False)
-
-
     
+
+
+    # We need to recorver the translation because the point cloud we used in aligner is normalized and prescaled.
+    # Rotation is not affected by those factors
+    delta_tran = Aligner.centroid_gt - Aligner.result_icp.transformation[:3, :3] @ (Aligner.centroid_rc * Aligner.scale_factor)
+    tran_new = Aligner.result_icp.transformation[:3, 3].reshape(3, 1) * Aligner.backward_factor + delta_tran.reshape(3, 1)
     
     rotError = rotation_error(np.array(gt_transformation['rotation']), Aligner.result_icp.transformation[:3, :3])
-    tranError = position_error(np.array(gt_transformation['translation']).reshape(3, 1), Aligner.result_icp.transformation[:3, 3].reshape(3, 1) * Aligner.backward_factor + Aligner.delta_tran.reshape(3, 1)) 
+    tranError = position_error(np.array(gt_transformation['translation']).reshape(3, 1), tran_new) 
 
-    print(rotError, tranError)
+    print("Rotation Error is {} degree and Translation Error is {} meters".format(rotError, tranError))
+
     
-
-    tran_new = Aligner.result_icp.transformation[:3, 3].reshape(3, 1) * Aligner.backward_factor + Aligner.delta_tran.reshape(3, 1)
     est_new = np.concatenate(
                     [np.concatenate([Aligner.result_icp.transformation[:3, :3], tran_new], axis=1), np.array([[0, 0, 0, 1]])], axis=0)
 
-    Aligner.target.scale(Aligner.backward_factor, center = Aligner.centroid_gt)
-    Aligner.draw_registration_result(mesh_reconstruction, Aligner.target, np.eye(4), colored=True)
+    mesh_reconstruction.scale(gt_transformation['scale'], center = np.zeros(3))
+    Aligner.draw_registration_result(mesh_reconstruction, mesh_gt, est_new, colored=False, inverse=True)
 
-
-    print(Aligner.result_icp.transformation[:3, 3].reshape(3, 1) * Aligner.backward_factor + Aligner.delta_tran.reshape(3, 1))
-    print(np.array(gt_transformation['translation']).reshape(3, 1))
-    print(Aligner.result_icp.transformation[:3, 3].reshape(3, 1))
-    print(Aligner.backward_factor)
-    print(Aligner.delta_tran.reshape(3, 1))
+    
