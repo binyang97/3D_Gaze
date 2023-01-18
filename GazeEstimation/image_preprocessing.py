@@ -41,12 +41,48 @@ def load_object(file_path, allow_legacy=True):
             gc.enable()
     return data
 
+def calibrate(path_chessboard, visualization = True):
+    # termination criteria
+    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
+    # prepare object points, like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
+    objp = np.zeros((6*7,3), np.float32)
+    objp[:,:2] = np.mgrid[0:7,0:6].T.reshape(-1,2)
+    # Arrays to store object points and image points from all the images.
+    objpoints = [] # 3d point in real world space
+    imgpoints = [] # 2d points in image plane.
+    images = glob(path_chessboard + '/*.jpg')
+    for fname in images:
+        img = cv2.imread(fname)
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        # Find the chess board corners
+        ret, corners = cv2.findChessboardCorners(gray, (7,6), None)
+        # If found, add object points, image points (after refining them)
+        if ret == True:
+            objpoints.append(objp)
+            corners2 = cv2.cornerSubPix(gray,corners, (11,11), (-1,-1), criteria)
+            imgpoints.append(corners2)
+
+            if visualization:
+                # Draw and display the corners
+                cv2.drawChessboardCorners(img, (7,6), corners2, ret)
+                cv2.imshow('img', img)
+                cv2.waitKey(500)
+    cv2.destroyAllWindows()
+
+    ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None)
+
+
+    return ret, mtx, dist, rvecs, tvecs
+
 
 
 if __name__ == "__main__":
     if platform == "linux" or platform == "linux2":  
     # linux
-        pass
+        pi_imagepath = r"/home/biyang/Documents/3D_Gaze/Colmap/PI_room1/Test_image100/images" 
+        output_path = r"/home/biyang/Documents/3D_Gaze/Colmap/PI_room1/Test_image100_undistorted_chessboard/images_undistorted_chessboard"
+        intrinsic_path = ""
+        chessboard_path = r"/home/biyang/Documents/3D_Gaze/dataset/PupilInvisible/chessboard"
 
     elif platform == "win32":
     # Windows...
@@ -56,7 +92,8 @@ if __name__ == "__main__":
         intrinsic_path = r"D:\Documents\Semester_Project\3D_Gaze\dataset\PupilInvisible\raw_data\2023-01-10-23-37-12\world.intrinsics"
 
     VISUALIZATION = False
-    SAVE = False
+    SAVE = True
+    CHESSBOARD = True
 
     ## Intrinsics parameters are totally the same
 
@@ -92,25 +129,33 @@ if __name__ == "__main__":
         mtx = np.array(pi_intrinsic['camera_matrix'])
         dist = np.array(pi_intrinsic['dist_coefs'])
 
+    _, mtx_chessboard , dist_chessboard , _,_ = calibrate(chessboard_path, visualization=False)
 
     
     img_files = os.listdir(pi_imagepath)
     
-    id = 20
+    id = 10
 
     if VISUALIZATION:
+        #  Undistortion the image
         img = cv2.imread(os.path.join(pi_imagepath, img_files[id]),1) 
         h,  w = img.shape[:2]
         newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (w,h), 0, (w,h))
         #newcameramtx = mtx
         dst = cv2.undistort(img, mtx, dist, None, newcameramtx)
 
-        titles = ['Original Image(colored)','Undistorted Image']
+        # Smoothing (Using Gaussian Filter)
+        #dst2 = cv2.GaussianBlur(dst, (7, 7), 0)
+
+        newcameramtx_chessboard , roi_chessboard  = cv2.getOptimalNewCameraMatrix(mtx_chessboard , dist_chessboard , (w,h), 0, (w,h))
+        dst_chessboard = cv2.undistort(img, mtx_chessboard , dist_chessboard , None, newcameramtx_chessboard )
+
+        titles = ['Original Image(colored)','Undistorted Image (Pre-recorded)', 'Undistorted Image (Chessboard)']
                 # 'Original Image (grayscale)','Image after removing the noise (grayscale)']
-        images = [img, dst]
+        images = [img, dst, dst_chessboard]
         plt.figure(figsize=(13,5))
         for i in range(len(images)):
-            plt.subplot(1,2,i+1)
+            plt.subplot(1,3,i+1)
             plt.imshow(cv2.cvtColor(images[i],cv2.COLOR_BGR2RGB))
             plt.title(titles[i])
             plt.xticks([])
@@ -123,9 +168,17 @@ if __name__ == "__main__":
         for img_path in img_files:
             img = cv2.imread(os.path.join(pi_imagepath, img_path),1) 
             h,  w = img.shape[:2]
-            newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (w,h), 0, (w,h))
-            #newcameramtx = mtx
-            dst = cv2.undistort(img, mtx, dist, None, newcameramtx)
+            if CHESSBOARD:
+                print("The camera intrinsics are from chessboard calibration")
+                newcameramtx_chessboard , roi_chessboard  = cv2.getOptimalNewCameraMatrix(mtx_chessboard , dist_chessboard , (w,h), 0, (w,h))
+                dst= cv2.undistort(img, mtx_chessboard , dist_chessboard , None, newcameramtx_chessboard )
+            else:
+                print("The camera intrinsics are pre-recorded")
+                newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (w,h), 0, (w,h))
+                #newcameramtx = mtx
+                dst = cv2.undistort(img, mtx, dist, None, newcameramtx)
+
+            #dst2 = cv2.GaussianBlur(dst, (7, 7), 0)
 
 
             if os.path.exists(output_path):
@@ -135,4 +188,9 @@ if __name__ == "__main__":
 
             cv2.imwrite(os.path.join(output_path, img_path), dst)
 
+    
+    
+    
+            
 
+    

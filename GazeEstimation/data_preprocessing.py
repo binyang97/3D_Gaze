@@ -141,8 +141,8 @@ class DataPreprocessor:
 if __name__ == "__main__":
     if platform == "linux" or platform == "linux2":  
     # linux
-        datapath = r"/home/biyang/Documents/3D_Gaze/dataset/PupilInvisible/raw_data/2021-05-20-15-19-08/exports/000"
-        output_path = r"/home/biyang/Documents/3D_Gaze/dataset/PupilInvisible/room1"
+        datapath = r"/home/biyang/Documents/3D_Gaze/dataset/PupilInvisible/raw_data/2023-01-18-21-01-01/exports/000"
+        output_path = r"/home/biyang/Documents/3D_Gaze/dataset/PupilInvisible/chessboard_2"
 
     elif platform == "win32":
     # Windows...
