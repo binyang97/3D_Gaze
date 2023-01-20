@@ -164,10 +164,10 @@ if __name__ == "__main__":
     extractor.extract()
 
     extractor.compute_error()
-    extractor.write(output_path)
+    #extractor.write(output_path)
 
-    VIS_KEYPOINTS = False
-    TEST = True
+    VIS_KEYPOINTS = True
+    TEST = False
     
 
     est_extrinsic = np.concatenate(

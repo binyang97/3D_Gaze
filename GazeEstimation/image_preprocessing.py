@@ -86,14 +86,15 @@ if __name__ == "__main__":
 
     elif platform == "win32":
     # Windows...
-        pi_imagepath = r"D:\Documents\Semester_Project\3D_Gaze\dataset\PupilInvisible\room1_v2\images" 
+        pi_imagepath = r"D:\Documents\Semester_Project\3D_Gaze\dataset\PupilInvisible\room1\image100\images" 
         iphone_imagepath = glob(r"D:\Documents\Semester_Project\3D_Gaze\dataset\PupilInvisible\TestPhone\images" + "/*")
-        output_path = r"D:\Documents\Semester_Project\3D_Gaze\dataset\PupilInvisible\room1_v2\images_undistorted"
+        output_path = r"D:\Documents\Semester_Project\3D_Gaze\dataset\PupilInvisible\room1\image100\images_undistorted_prerecorded"
         intrinsic_path = r"D:\Documents\Semester_Project\3D_Gaze\dataset\PupilInvisible\raw_data\2023-01-10-23-37-12\world.intrinsics"
+        chessboard_path = r"D:\Documents\Semester_Project\3D_Gaze\dataset\PupilInvisible\chessboard"
 
     VISUALIZATION = False
     SAVE = True
-    CHESSBOARD = True
+    CHESSBOARD = False
 
     ## Intrinsics parameters are totally the same
 
