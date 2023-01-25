@@ -7,8 +7,8 @@ from Colmap_Reader import ColmapReader
 import numpy as np
 import collections
 
-BaseMask = collections.namedtuple(
-    "Mask", ["tag_id", "tag_corners", "tag_center", "pixels_inside_tag"])
+Mask = collections.namedtuple(
+    "Mask", ["tag_id", "tag_corners", "tag_center", "pixels_inside_tag", "mask"])
 
 def visualize(img_grayscale, tags):
     color_img = cv2.cvtColor(img_grayscale, cv2.COLOR_GRAY2RGB)
@@ -42,12 +42,51 @@ def get_mask(img_grayscale, tags, visualization = True):
     print("There are totally {} tags in the frame".format(len(tags)))
     masks = []
     for tag in tags:
-        mask = np.zeros((img.shape), dtype=np.uint8)
+        mask = np.zeros((img_grayscale.shape), dtype=np.uint8)
         pts = np.array(tag.corners.astype(int))
         cv2.fillPoly(mask, [pts], (255))
 
-    return
-        
+        valid_indices = np.where(mask == 255)
+        # in form of u, v
+        valid_pixels = np.vstack([valid_indices[1], valid_indices[0]]).T
+
+        masks.append(Mask(tag_id=tag.tag_id,
+                        tag_corners=tag.corners,
+                        tag_center=tag.center,
+                        pixels_inside_tag= valid_pixels,
+                        mask=mask))
+    if visualization:
+        mask_vis = masks[0].mask
+        for idx in range(1, len(masks)):
+           mask_vis = cv2.bitwise_or(mask_vis, masks[idx].mask, mask = None)
+
+        vis = np.concatenate((img_grayscale, mask_vis), axis = 1)
+
+        cv2.namedWindow("output", cv2.WINDOW_NORMAL)
+
+        cv2.imshow('output', vis)
+
+        k = cv2.waitKey(0)
+        cv2.destroyAllWindows()
+	
+    
+    return masks
+
+
+def get_corresponding_3d_points(masks, keypoints_2d, keypoints_3d_ids):  
+    valid_indices_3d_points = []
+    for mask in masks:
+        valid_pixels = mask.pixels_inside_tag
+        found_indices = []
+        for valid_pixel in valid_pixels:
+            index = np.where((keypoints_2d == valid_pixel).all(axis=1))[0]
+            if len(index) > 0:
+                found_indices.extend(list(index))
+        found_indices = np.array(found_indices)
+        valid_indices_3d_points.append(keypoints_3d_ids[found_indices])
+
+    # The filtered 3d points still have id of -1 
+    return  valid_indices_3d_points
 
 if __name__ == '__main__':
 
@@ -62,14 +101,15 @@ if __name__ == '__main__':
         database_path = r"D:\Documents\Semester_Project\3D_Gaze\dataset\PupilInvisible\room1\image_100_undistorted_prerecorded\Stereo_Fusion.min_num_pixels=10"
 
 
+    SIMPLE_VISUALIZATION = False
     VISUALIZATION = False
 
     database_colmap = ColmapReader(database_path)
     cameras, images, points3D = database_colmap.read_sparse_model()
 
     # Test
-    test_frame = images[100]
-    print(np.array(test_frame.xys).shape)
+    test_frame = images[60]
+    print(np.array(test_frame.xys))
     print(np.where(test_frame.point3D_ids != -1)[0].shape)
     print(test_frame.point3D_ids.shape)
 
@@ -86,21 +126,22 @@ if __name__ == '__main__':
     img_fullpath = os.path.join(dataset_path, test_frame.name)
     img = cv2.imread(img_fullpath, cv2.IMREAD_GRAYSCALE)
     tags = at_detector.detect(img)
+    
+    masks = get_mask(img_grayscale=img, tags=tags, visualization=VISUALIZATION)
 
-    # print(tags[0].corners)
-    # print(tags[0].center)
-    mask = np.zeros((img.shape), dtype=np.uint8)
-    pts = np.array(tags[0].corners.astype(int))
-    print(pts)
-    cv2.fillPoly(mask, [pts], (255))
+    # Find the corresponding 3d points
+    search_space_pixels = np.array(test_frame.xys.astype(int))
+    points_3d = test_frame.point3D_ids
+    
+    corresponding_3d_ids = get_corresponding_3d_points(masks, search_space_pixels, points_3d)
 
-    pixels = np.where(mask == 255)
-    print(pixels)
-    # cv2.imshow('mask', mask)
-    # k = cv2.waitKey(0)
-    # cv2.destroyAllWindows()
+    apriltag_3d_points = []
+    for (mask, points_3d_ids) in zip(masks, corresponding_3d_ids):
+        
 
-    if VISUALIZATION:
+
+
+    if SIMPLE_VISUALIZATION:
         image_list = glob(dataset_path + "/*.jpg")
         image_list.sort()
         index = 80
