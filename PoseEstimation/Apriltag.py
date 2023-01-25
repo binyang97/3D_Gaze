@@ -116,9 +116,9 @@ if __name__ == '__main__':
 
     # Test
     test_frame = images[60]
-    print(np.array(test_frame.xys))
-    print(np.where(test_frame.point3D_ids != -1)[0].shape)
-    print(test_frame.point3D_ids.shape)
+    # print(np.array(test_frame.xys))
+    # print(np.where(test_frame.point3D_ids != -1)[0].shape)
+    # print(test_frame.point3D_ids.shape)
 
     at_detector = Detector(
             families="tagStandard41h12",
@@ -159,7 +159,8 @@ if __name__ == '__main__':
 
 
 
-    print(valid_points_3D)
+    print(len(valid_points_3D[2].points_3d_xyz))
+
         
 
 
