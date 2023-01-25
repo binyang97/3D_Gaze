@@ -10,6 +10,9 @@ import collections
 Mask = collections.namedtuple(
     "Mask", ["tag_id", "tag_corners", "tag_center", "pixels_inside_tag", "mask"])
 
+Points3D = collections.namedtuple(
+    "Points3D", ["tag_id", "image_name", "points_3d_xyz"])
+
 def visualize(img_grayscale, tags):
     color_img = cv2.cvtColor(img_grayscale, cv2.COLOR_GRAY2RGB)
     for tag in tags:
@@ -75,18 +78,22 @@ def get_mask(img_grayscale, tags, visualization = True):
 
 def get_corresponding_3d_points(masks, keypoints_2d, keypoints_3d_ids):  
     valid_indices_3d_points = []
+    valid_indices_2d_pixels = []
     for mask in masks:
         valid_pixels = mask.pixels_inside_tag
         found_indices = []
+        found_pixels = []
         for valid_pixel in valid_pixels:
             index = np.where((keypoints_2d == valid_pixel).all(axis=1))[0]
             if len(index) > 0:
                 found_indices.extend(list(index))
+                found_pixels.extend([valid_pixel] * len(index))
         found_indices = np.array(found_indices)
         valid_indices_3d_points.append(keypoints_3d_ids[found_indices])
+        valid_indices_2d_pixels.append(found_pixels)
 
     # The filtered 3d points still have id of -1 
-    return  valid_indices_3d_points
+    return  valid_indices_3d_points, valid_indices_2d_pixels
 
 if __name__ == '__main__':
 
@@ -133,10 +140,26 @@ if __name__ == '__main__':
     search_space_pixels = np.array(test_frame.xys.astype(int))
     points_3d = test_frame.point3D_ids
     
-    corresponding_3d_ids = get_corresponding_3d_points(masks, search_space_pixels, points_3d)
+    corresponding_3d_ids, found_2d_pixels = get_corresponding_3d_points(masks, search_space_pixels, points_3d)
+
+    #print(len(found_2d_pixels[2]), len(corresponding_3d_ids[2]))
 
     apriltag_3d_points = []
-    for (mask, points_3d_ids) in zip(masks, corresponding_3d_ids):
+    # please use the namedtuple for 3d points as well (so we could also track the corresponding 2d image backward)
+    valid_points_3D = []
+    for (mask, points_3d_ids, pixels_2d) in zip(masks, corresponding_3d_ids, found_2d_pixels):
+        xyz_3d = []
+        for i, id_3d in enumerate(points_3d_ids):
+            if id_3d != -1:
+                xyz_3d.append(points3D[id_3d])
+        
+        valid_points_3D.append(Points3D(tag_id=mask.tag_id,
+                                        image_name=test_frame.name, 
+                                        points_3d_xyz=xyz_3d))
+
+
+
+    print(valid_points_3D)
         
 
 
