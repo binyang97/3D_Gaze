@@ -6,12 +6,25 @@ import os
 from Colmap_Reader import ColmapReader
 import numpy as np
 import collections
+import open3d as o3d
+import copy
 
 Mask = collections.namedtuple(
     "Mask", ["tag_id", "tag_corners", "tag_center", "pixels_inside_tag", "mask"])
 
+# points_3d_info containing information like xyz, id of image and 2d pixel (with which we can backward track the correspondence)
 Points3D = collections.namedtuple(
-    "Points3D", ["tag_id", "image_name", "points_3d_xyz"])
+    "Points3D", ["image_name", "points_3d_info"])
+
+
+def create_geometry_at_points(points, color, radius=0.005):
+    geometries = o3d.geometry.TriangleMesh()
+    for point in points:
+        sphere = o3d.geometry.TriangleMesh.create_sphere(radius=radius) #create a small sphere to represent point
+        sphere.translate(point) #translate this sphere to point
+        geometries += sphere
+    geometries.paint_uniform_color(color)
+    return geometries 
 
 def visualize(img_grayscale, tags):
     color_img = cv2.cvtColor(img_grayscale, cv2.COLOR_GRAY2RGB)
@@ -76,7 +89,7 @@ def get_mask(img_grayscale, tags, visualization = True):
     return masks
 
 
-def get_corresponding_3d_points(masks, keypoints_2d, keypoints_3d_ids):  
+def get_corresponding_3d_points_ids(masks, keypoints_2d, keypoints_3d_ids):  
     valid_indices_3d_points = []
     valid_indices_2d_pixels = []
     for mask in masks:
@@ -95,6 +108,21 @@ def get_corresponding_3d_points(masks, keypoints_2d, keypoints_3d_ids):
     # The filtered 3d points still have id of -1 
     return  valid_indices_3d_points, valid_indices_2d_pixels
 
+def get_corresponding_3d_points(ids, all_3d_keypoints):
+
+    valid_points_3D = []
+    for points_3d_ids in ids:
+        xyz_3d = []
+        for id_3d in points_3d_ids:
+            if id_3d != -1:
+                xyz_3d.append(all_3d_keypoints[id_3d])
+        
+        valid_points_3D.append(Points3D(image_name=test_frame.name, 
+                                        points_3d_info=xyz_3d))
+
+    return valid_points_3D
+
+
 if __name__ == '__main__':
 
     if platform == "linux" or platform == "linux2":  
@@ -110,12 +138,15 @@ if __name__ == '__main__':
 
     SIMPLE_VISUALIZATION = False
     VISUALIZATION = False
+    VISUALIZATION_3D = False
+
 
     database_colmap = ColmapReader(database_path)
     cameras, images, points3D = database_colmap.read_sparse_model()
+    pcd_rc, _ = database_colmap.read_dense_model()
 
     # Test
-    test_frame = images[60]
+    test_frame = images[29]
     # print(np.array(test_frame.xys))
     # print(np.where(test_frame.point3D_ids != -1)[0].shape)
     # print(test_frame.point3D_ids.shape)
@@ -130,39 +161,65 @@ if __name__ == '__main__':
             debug=0,
         )
 
-    img_fullpath = os.path.join(dataset_path, test_frame.name)
-    img = cv2.imread(img_fullpath, cv2.IMREAD_GRAYSCALE)
-    tags = at_detector.detect(img)
+    for frame in images:
+
+        img_fullpath = os.path.join(dataset_path, test_frame.name)
+        img = cv2.imread(img_fullpath, cv2.IMREAD_GRAYSCALE)
+        tags = at_detector.detect(img)
+        if len(tags) == 0:
+            continue
+
     
-    masks = get_mask(img_grayscale=img, tags=tags, visualization=VISUALIZATION)
+        masks = get_mask(img_grayscale=img, tags=tags, visualization=VISUALIZATION)
 
-    # Find the corresponding 3d points
-    search_space_pixels = np.array(test_frame.xys.astype(int))
-    points_3d = test_frame.point3D_ids
-    
-    corresponding_3d_ids, found_2d_pixels = get_corresponding_3d_points(masks, search_space_pixels, points_3d)
-
-    #print(len(found_2d_pixels[2]), len(corresponding_3d_ids[2]))
-
-    apriltag_3d_points = []
-    # please use the namedtuple for 3d points as well (so we could also track the corresponding 2d image backward)
-    valid_points_3D = []
-    for (mask, points_3d_ids, pixels_2d) in zip(masks, corresponding_3d_ids, found_2d_pixels):
-        xyz_3d = []
-        for i, id_3d in enumerate(points_3d_ids):
-            if id_3d != -1:
-                xyz_3d.append(points3D[id_3d])
+        # Find the corresponding 3d points
+        search_space_pixels = np.array(test_frame.xys.astype(int))
+        points_3d = test_frame.point3D_ids
         
-        valid_points_3D.append(Points3D(tag_id=mask.tag_id,
-                                        image_name=test_frame.name, 
-                                        points_3d_xyz=xyz_3d))
+        corresponding_3d_ids, _ = get_corresponding_3d_points_ids(masks, search_space_pixels, points_3d)
 
+        #print(len(found_2d_pixels[2]), len(corresponding_3d_ids[2]))
 
-
-    print(len(valid_points_3D[2].points_3d_xyz))
+        # please use the namedtuple for 3d points as well (so we could also track the corresponding 2d image backward)
+        valid_points_3D = get_corresponding_3d_points(corresponding_3d_ids, points3D)
 
         
+    # define a color bar for visualization
+    colorbar = np.array([[0, 0, 255], # blue
+                        [255, 0, 0], # red
+                        [0, 255, 0], # green
+                        [255,140,0], # orange
+                        [138,43,226], #purple
+                        [255,215,0],] #yellow 
+                        ) 
+    
+    if VISUALIZATION_3D:
 
+
+        pcd = copy.deepcopy(pcd_rc)
+        #pcd.paint_uniform_color([220,220,220])
+        vis = [pcd]
+        for i, tag in enumerate(valid_points_3D):
+            points = []
+            for valid_point_3D in tag.points_3d_info:
+                points.append(valid_point_3D.xyz)
+            
+            points = np.array(points)
+            
+
+            # highlight the points
+            vis_geometry = create_geometry_at_points(points, colorbar[i], radius=0.5)
+
+            vis.append(vis_geometry)
+
+        o3d.visualization.draw_geometries(vis)
+         
+
+            
+
+
+
+                
 
 
     if SIMPLE_VISUALIZATION:
