@@ -182,9 +182,9 @@ if __name__ == "__main__":
         intrinsic_path = glob('/home/biyang/Documents/3D_Gaze/Colmap/' + ARKitSceneDataID + '/gt' + '/*.pincam')[0]
 
     elif platform == "win32":
-        traj_path = "D:/Documents/Semester_Project/Colmap_Test/GT/lowres_wide.traj"
-        mesh_path = "D:/Documents/Semester_Project/Colmap_Test/GT/40777060_3dod_mesh.ply"
-        intrinsic_path = "D:/Documents/Semester_Project/Colmap_Test/GT/40777060_98.764.pincam"
+        traj_path = "D:/Documents/Semester_Project/Colmap_Test/40777060/GT/lowres_wide.traj"
+        mesh_path = "D:/Documents/Semester_Project/Colmap_Test/40777060/GT/40777060_3dod_mesh.ply"
+        intrinsic_path = "D:/Documents/Semester_Project/Colmap_Test/40777060/GT/40777060_98.764.pincam"
 
     pose_gt, mesh_gt, intrinsics = LoadARSceneData(traj_path, mesh_path, intrinsic_path)
 
@@ -284,7 +284,7 @@ if __name__ == "__main__":
     # print(est_extrinsic)
 
     print(sum(np.array(rot_error)>4))
-    print(sum(np.array(tran_error)>0.3))
+    print(sum(np.array(tran_error)>1))
     if VISUALIZATION:
         bounds = mesh_gt.bounding_box.bounds
         corners = trimesh.bounds.corners(bounds)

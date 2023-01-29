@@ -127,6 +127,6 @@ if __name__ == '__main__':
     # pcd_dense, mesh_dense = data.read_dense_model()
     # o3d.visualization.draw_geometries([pcd_dense])
 
-    print(cameras.items()[0])
+    #print(cameras.items()[0])
     #print(images.items())
-    #print(points3D.items())
+    print(points3D[7754])

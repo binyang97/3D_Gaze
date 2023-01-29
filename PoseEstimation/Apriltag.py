@@ -8,6 +8,7 @@ import numpy as np
 import collections
 import open3d as o3d
 import copy
+import json
 
 Mask = collections.namedtuple(
     "Mask", ["tag_id", "tag_corners", "tag_center", "pixels_inside_tag", "mask"])
@@ -16,6 +17,20 @@ Mask = collections.namedtuple(
 Points3D = collections.namedtuple(
     "Points3D", ["image_name", "points_3d_info"])
 
+# define a color bar for visualizatio
+global colorbar 
+colorbar = np.array([[0, 0, 255], # blue
+                        [255, 0, 0], # red
+                        [0, 255, 0], # green
+                        [255,20,147], # pink
+                        [138,43,226], #purple
+                        [255,215,0], # yellow
+                        [255,140,0],] # yellow 
+                        ) /255
+
+# helper function
+def filter_array(arr1, arr2):
+    return filter(lambda x: x not in arr2, arr1)
 
 def create_geometry_at_points(points, color, radius=0.005):
     geometries = o3d.geometry.TriangleMesh()
@@ -26,7 +41,14 @@ def create_geometry_at_points(points, color, radius=0.005):
     geometries.paint_uniform_color(color)
     return geometries 
 
-def visualize(img_grayscale, tags):
+def create_pcd(points, color):
+    points_open3d = o3d.utility.Vector3dVector(points)
+    pcd = o3d.geometry.PointCloud(points_open3d)
+    pcd.paint_uniform_color(color)
+
+    return pcd
+
+def visualize_2d(img_grayscale, tags):
     color_img = cv2.cvtColor(img_grayscale, cv2.COLOR_GRAY2RGB)
     for tag in tags:
             for idx in range(len(tag.corners)):
@@ -53,6 +75,21 @@ def visualize(img_grayscale, tags):
 
     k = cv2.waitKey(0)
     cv2.destroyAllWindows()
+
+def visualization_3d(pcd, registered_points, highlight = False):
+    vis = [pcd]
+    for i, tag_id in enumerate(registered_points.keys()):
+        if highlight:
+        # highlight the points
+            vis_geometry = create_geometry_at_points(registered_points[tag_id], colorbar[i], radius=0.5)
+            vis.append(vis_geometry)
+        else:
+            
+            pcd_tag = create_pcd(registered_points[tag_id], colorbar[i])
+            vis.append(pcd_tag)
+
+    o3d.visualization.draw_geometries(vis)
+
 
 def get_mask(img_grayscale, tags, visualization = True):
     print("There are totally {} tags in the frame".format(len(tags)))
@@ -108,20 +145,21 @@ def get_corresponding_3d_points_ids(masks, keypoints_2d, keypoints_3d_ids):
     # The filtered 3d points still have id of -1 
     return  valid_indices_3d_points, valid_indices_2d_pixels
 
-def get_corresponding_3d_points(ids, all_3d_keypoints):
+def get_valid_3d_points(valid_ids, all_3d_keypoints):
 
-    valid_points_3D = []
-    for points_3d_ids in ids:
-        xyz_3d = []
-        for id_3d in points_3d_ids:
-            if id_3d != -1:
-                xyz_3d.append(all_3d_keypoints[id_3d])
-        
-        valid_points_3D.append(Points3D(image_name=test_frame.name, 
-                                        points_3d_info=xyz_3d))
+    valid_points_3D_xyz = []
+    valid_points_3D_repro_error = []
+    valid_points_3D_info = []
 
-    return valid_points_3D
+    for id_3d in valid_ids:
+        if id_3d != -1:
+            valid_points_3D_info.append(all_3d_keypoints[id_3d])    
+            valid_points_3D_xyz.append(all_3d_keypoints[id_3d].xyz)
+            valid_points_3D_repro_error.append(all_3d_keypoints[id_3d].error)
 
+    valid_points_3D_xyz = np.array(valid_points_3D_xyz)
+    valid_points_3D_repro_error = np.array(valid_points_3D_repro_error)
+    return valid_points_3D_xyz, valid_points_3D_repro_error, valid_points_3D_info
 
 if __name__ == '__main__':
 
@@ -135,21 +173,14 @@ if __name__ == '__main__':
         dataset_path = r"D:\Documents\Semester_Project\3D_Gaze\dataset\PupilInvisible\room1\image100\images_undistorted_prerecorded"
         database_path = r"D:\Documents\Semester_Project\3D_Gaze\dataset\PupilInvisible\room1\image_100_undistorted_prerecorded\Stereo_Fusion.min_num_pixels=10"
 
-
-    SIMPLE_VISUALIZATION = False
-    VISUALIZATION = False
+    VISUALIZATION_MASK = False
     VISUALIZATION_3D = False
+    TEST = False
 
 
     database_colmap = ColmapReader(database_path)
     cameras, images, points3D = database_colmap.read_sparse_model()
     pcd_rc, _ = database_colmap.read_dense_model()
-
-    # Test
-    test_frame = images[29]
-    # print(np.array(test_frame.xys))
-    # print(np.where(test_frame.point3D_ids != -1)[0].shape)
-    # print(test_frame.point3D_ids.shape)
 
     at_detector = Detector(
             families="tagStandard41h12",
@@ -161,77 +192,73 @@ if __name__ == '__main__':
             debug=0,
         )
 
-    for frame in images:
 
+    # test
+    if TEST:
+        test_frame = images[15]
         img_fullpath = os.path.join(dataset_path, test_frame.name)
+        img = cv2.imread(img_fullpath, cv2.IMREAD_GRAYSCALE)
+        tags = at_detector.detect(img)
+        visualize_2d(img, tags)
+
+        exit()
+
+
+    registered_3d_points_xyz = {} # register for each tag (including only xyz)
+    registered_3d_points_info = {} # register for each tag (including other info)
+    registered_3d_points_repro_error = {} # register for each tag (including other info)
+    visited_id = []
+    for frame in images.values():
+
+        img_fullpath = os.path.join(dataset_path, frame.name)
         img = cv2.imread(img_fullpath, cv2.IMREAD_GRAYSCALE)
         tags = at_detector.detect(img)
         if len(tags) == 0:
             continue
 
-    
-        masks = get_mask(img_grayscale=img, tags=tags, visualization=VISUALIZATION)
+        tag_ids = [tag.tag_id for tag in tags]
+        masks = get_mask(img_grayscale=img, tags=tags, visualization=VISUALIZATION_MASK)
 
         # Find the corresponding 3d points
-        search_space_pixels = np.array(test_frame.xys.astype(int))
-        points_3d = test_frame.point3D_ids
-        
+        search_space_pixels = np.array(frame.xys.astype(int))
+        points_3d = frame.point3D_ids
         corresponding_3d_ids, _ = get_corresponding_3d_points_ids(masks, search_space_pixels, points_3d)
 
-        #print(len(found_2d_pixels[2]), len(corresponding_3d_ids[2]))
+        # filter the duplicated ids
+        for (tag_id, corresponding_3d_id) in zip(tag_ids, corresponding_3d_ids):
+            non_visited_3d_id = filter_array(corresponding_3d_id, visited_id)
+            non_visited_3d_id = list(non_visited_3d_id)
+            visited_id.extend(non_visited_3d_id)
 
-        # please use the namedtuple for 3d points as well (so we could also track the corresponding 2d image backward)
-        valid_points_3D = get_corresponding_3d_points(corresponding_3d_ids, points3D)
-
-        
-    # define a color bar for visualization
-    colorbar = np.array([[0, 0, 255], # blue
-                        [255, 0, 0], # red
-                        [0, 255, 0], # green
-                        [255,140,0], # orange
-                        [138,43,226], #purple
-                        [255,215,0],] #yellow 
-                        ) 
-    
-    if VISUALIZATION_3D:
+            corresponding_3d_xyz, corresponding_3d_repro_error, corresponding_3d_info = get_valid_3d_points(non_visited_3d_id, points3D)
 
 
-        pcd = copy.deepcopy(pcd_rc)
-        #pcd.paint_uniform_color([220,220,220])
-        vis = [pcd]
-        for i, tag in enumerate(valid_points_3D):
-            points = []
-            for valid_point_3D in tag.points_3d_info:
-                points.append(valid_point_3D.xyz)
-            
-            points = np.array(points)
-            
-
-            # highlight the points
-            vis_geometry = create_geometry_at_points(points, colorbar[i], radius=0.5)
-
-            vis.append(vis_geometry)
-
-        o3d.visualization.draw_geometries(vis)
-         
-
-            
-
-
-
+            if len(corresponding_3d_xyz) == 0:
+                continue
+            if tag_id not in registered_3d_points_xyz.keys():
+                registered_3d_points_xyz[tag_id] = corresponding_3d_xyz
+                registered_3d_points_info[tag_id] = corresponding_3d_info
+                registered_3d_points_repro_error[tag_id] = corresponding_3d_repro_error
                 
-
-
-    if SIMPLE_VISUALIZATION:
-        image_list = glob(dataset_path + "/*.jpg")
-        image_list.sort()
-        index = 80
+            else:
+                registered_3d_points_xyz[tag_id] = np.concatenate((registered_3d_points_xyz[tag_id], corresponding_3d_xyz), axis=0)
+                registered_3d_points_info[tag_id] = np.concatenate((registered_3d_points_info[tag_id], corresponding_3d_info), axis=0)
+                registered_3d_points_repro_error[tag_id] = np.concatenate((registered_3d_points_repro_error[tag_id], corresponding_3d_repro_error), axis=0)
         
-        img = cv2.imread(image_list[index], cv2.IMREAD_GRAYSCALE)
+    
+    with open(r"D:\Documents\Semester_Project\3D_Gaze\dataset\PupilInvisible\room1\apriltags_repro_error.json", "w") as outfile:
+       json.dump({k: v.tolist() for k, v in registered_3d_points_repro_error.items()}, outfile, indent=4)
 
-        tags = at_detector.detect(img)
+    pcd_copy = copy.deepcopy(pcd_rc)
+    pcd_rc.paint_uniform_color(np.array([220, 220 ,220])/255)
 
-        visualize(img, tags)
+
+    # for tag in registered_3d_points_info.keys():
+    #     for info in registered_3d_points_info[tag]:
+    #         print(info.error)
+    if VISUALIZATION_3D:
+        visualization_3d(pcd_rc, registered_3d_points_xyz, highlight=False)
         
+         
 
         

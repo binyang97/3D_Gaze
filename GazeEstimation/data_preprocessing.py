@@ -146,8 +146,8 @@ if __name__ == "__main__":
 
     elif platform == "win32":
     # Windows...
-        datapath = r"D:\Documents\Semester_Project\3D_Gaze\dataset\PupilInvisible\raw_data\2023-01-10-23-37-12\exports\000"
-        output_path = r"D:\Documents\Semester_Project\3D_Gaze\dataset\PupilInvisible/room1_v2"
+        datapath = r"D:\Documents\Semester_Project\3D_Gaze\dataset\PupilInvisible\raw_data\2021-05-20-15-21-50\exports\000"
+        output_path = r"D:\Documents\Semester_Project\3D_Gaze\dataset\PupilInvisible/room1_v3"
 
     
 

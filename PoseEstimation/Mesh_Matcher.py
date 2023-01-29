@@ -301,7 +301,7 @@ if __name__ == "__main__":
 
 
 
-    Aligner = MeshAlignment(mesh_reconstruction, mesh_gt, num_points, scale_factor = gt_transformation['scale'], voxel_size=0.05, icp_method="standard")
+    Aligner = MeshAlignment(mesh_reconstruction, mesh_gt, num_points, scale_factor = 0.4584061866053055, voxel_size=0.05, icp_method="standard")
 
     Aligner.register()
     #Aligner.draw_registration_result(Aligner.source_down, Aligner.target_down, Aligner.result_ransac.transformation)
