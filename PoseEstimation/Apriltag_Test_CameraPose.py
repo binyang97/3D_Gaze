@@ -8,15 +8,12 @@ if __name__ == "__main__":
     
     if platform == "linux" or platform == "linux2":  
     # linux
-        dataset_path = r"/home/biyang/Documents/3D_Gaze/Colmap/PI_room1/Test_image100_undistorted_chessboard/images_undistorted_chessboard"
-        database_path = r"/home/biyang/Documents/3D_Gaze/Colmap/PI_room1/Test_image100_undistorted_chessboard/"
+        images_path = r""
 
     elif platform == "win32":
     # Windows...
-        dataset_path = r"D:\Documents\Semester_Project\3D_Gaze\dataset\PupilInvisible\room1\image100\images_undistorted_prerecorded"
-        database_path = r"D:\Documents\Semester_Project\3D_Gaze\dataset\PupilInvisible\room1\image_100_undistorted_prerecorded\Stereo_Fusion.min_num_pixels=10"
-
-
+        images_path = r"D:\Documents\Semester_Project\3D_Gaze\dataset\PupilInvisible\room1\images_gt_apriltags_undistorted"
+        
     camera_params = [766.2927454396544, 766.3976103393867, 543.6272327745995, 566.0580149497666]
     at_detector = Detector(
             families="tagStandard41h12",
@@ -29,11 +26,14 @@ if __name__ == "__main__":
         )
 
 
-    image_list = glob(dataset_path + "/*.jpg")
+    image_list = glob(images_path+ "/*.jpg")
+
+
+    for image_fullpath in image_list:
     
-    image_fullpath = image_list[10]
-    img = cv2.imread(image_fullpath, cv2.IMREAD_GRAYSCALE)
-    tags = at_detector.detect(img, estimate_tag_pose=True,camera_params = camera_params, tag_size=0.02)
+        img = cv2.imread(image_fullpath, cv2.IMREAD_GRAYSCALE)
+        tags = at_detector.detect(img, estimate_tag_pose=True,camera_params = camera_params, tag_size=0.02)
+
 
     print(tags[0].pose_t)
     print(tags[0].pose_R)

@@ -4,6 +4,7 @@ from glob import glob
 import cv2
 import os
 from Colmap_Reader import ColmapReader
+from sklearn.cluster import DBSCAN
 import numpy as np
 import collections
 import open3d as o3d
@@ -161,6 +162,58 @@ def get_valid_3d_points(valid_ids, all_3d_keypoints):
     valid_points_3D_repro_error = np.array(valid_points_3D_repro_error)
     return valid_points_3D_xyz, valid_points_3D_repro_error, valid_points_3D_info
 
+def filter_registered_points(registered_points_xyz, registered_points_reprojection_error, visualization = False):
+     for key in registered_points_xyz.keys():
+        point_cloud = registered_points_xyz[key]
+        repro_error = registered_points_reprojection_error[key]
+
+        min_repro_error = np.mean(repro_error) - 0*np.std(repro_error)
+        print(min_repro_error)
+
+        valid_repro_error = np.zeros(len(repro_error), dtype=bool)
+        valid_repro_error[repro_error < min_repro_error] = True
+
+        outliers_too_large_repro_error = point_cloud[~valid_repro_error]
+        point_cloud = point_cloud[valid_repro_error]
+        
+        core_samples_mask = np.zeros(len(point_cloud), dtype=bool)
+        # Define the DBSCAN function
+        # eps is the most important parameters
+        # minimum distance that will be defined as a neighbor
+        dbscan = DBSCAN(eps=0.5, min_samples=5)
+
+        # Fit the model to the point cloud data
+        dbscan.fit(point_cloud)
+        
+        labels = dbscan.labels_
+        unique_labels, counts = np.unique(dbscan.labels_, return_counts=True)
+        counts = counts[unique_labels >= 0]
+        unique_labels = unique_labels[unique_labels >= 0]
+
+        print(unique_labels, counts, key)
+        # Case when there is multiple valid clustered classes --> simple idea: directly take the one with the most count
+        if len(unique_labels) > 1:
+            main_label = unique_labels[np.argmax(counts)]
+            core_samples_mask[labels == main_label] = True
+        else:
+            core_samples_mask[dbscan.core_sample_indices_] = True
+
+        registered_points_xyz[key] = point_cloud[core_samples_mask]
+
+        if outliers is None:
+            outliers = point_cloud[~core_samples_mask]
+        else:
+            outliers = np.concatenate((outliers, point_cloud[~core_samples_mask]), axis=0)
+
+        if outliers is None:
+            outliers = outliers_too_large_repro_error
+        else:
+            outliers = np.concatenate((outliers, outliers_too_large_repro_error), axis=0)
+
+        
+
+        return registered_points_xyz, outliers
+
 if __name__ == '__main__':
 
     if platform == "linux" or platform == "linux2":  
@@ -246,8 +299,10 @@ if __name__ == '__main__':
                 registered_3d_points_repro_error[tag_id] = np.concatenate((registered_3d_points_repro_error[tag_id], corresponding_3d_repro_error), axis=0)
         
     
-    with open(r"D:\Documents\Semester_Project\3D_Gaze\dataset\PupilInvisible\room1\apriltags_repro_error.json", "w") as outfile:
-       json.dump({k: v.tolist() for k, v in registered_3d_points_repro_error.items()}, outfile, indent=4)
+    # with open(r"D:\Documents\Semester_Project\3D_Gaze\dataset\PupilInvisible\room1\apriltags_repro_error.json", "w") as outfile:
+    #    json.dump({k: v.tolist() for k, v in registered_3d_points_repro_error.items()}, outfile, indent=4)
+
+    filtered_registered_tag_points_xyz, outliers_xyz = filter_registered_points(registered_3d_points_xyz, registered_3d_points_repro_error, visualization = False)
 
     pcd_copy = copy.deepcopy(pcd_rc)
     pcd_rc.paint_uniform_color(np.array([220, 220 ,220])/255)
@@ -257,7 +312,14 @@ if __name__ == '__main__':
     #     for info in registered_3d_points_info[tag]:
     #         print(info.error)
     if VISUALIZATION_3D:
-        visualization_3d(pcd_rc, registered_3d_points_xyz, highlight=False)
+        #visualization_3d(pcd_rc, registered_3d_points_xyz, highlight=False)
+
+        pcd_outliers = create_pcd(outliers_xyz, color = [0, 0 ,0])
+        vis = [pcd_rc, pcd_outliers]
+        for i, tag_id in enumerate(filtered_registered_tag_points_xyz.keys()):
+        
+            pcd_tag = create_pcd(filtered_registered_tag_points_xyz[tag_id], colorbar[i])
+            vis.append(pcd_tag)
         
          
 
