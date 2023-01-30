@@ -3,12 +3,16 @@ from pupil_apriltags import Detector
 from sys import platform
 from glob import glob
 import cv2
+import collections
+
+TagPose = collections.namedtuple(
+    "Pose", ["tag_id", "R", "t", "error"])
 
 if __name__ == "__main__":
     
     if platform == "linux" or platform == "linux2":  
     # linux
-        images_path = r""
+        images_path = r"/home/biyang/Documents/3D_Gaze/dataset/PupilInvisible/room1/images_gt_apriltags_undistorted"
 
     elif platform == "win32":
     # Windows...
@@ -29,13 +33,27 @@ if __name__ == "__main__":
     image_list = glob(images_path+ "/*.jpg")
 
 
+
+    tags_in_images = []
+    tags_id_in_images = []
+
     for image_fullpath in image_list:
     
         img = cv2.imread(image_fullpath, cv2.IMREAD_GRAYSCALE)
-        tags = at_detector.detect(img, estimate_tag_pose=True,camera_params = camera_params, tag_size=0.02)
+        tags = at_detector.detect(img, estimate_tag_pose=True, camera_params = camera_params, tag_size=0.02)
+        tags_in_image = []
+        tags_id_in_image = []
+        for tag in tags:
+            tags_in_image.append(TagPose(tag_id=tag.tag_id, 
+                                        R = tag.pose_R, 
+                                        t = tag.pose_t, error = tag.pose_err))
+            
+            tags_id_in_image.append(tag.tag_id)
+        tags_in_images.append(tags_in_image)
+        tags_id_in_images.append(tags_id_in_image)
 
+    print(tags_id_in_images)
+    Match = [] # store the tuple (a,b), a: the index of matched image, b: corresponding tag id
+    
 
-    print(tags[0].pose_t)
-    print(tags[0].pose_R)
-    print(tags[0].pose_err)
     
