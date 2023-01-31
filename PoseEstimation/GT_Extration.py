@@ -159,6 +159,7 @@ if __name__ == "__main__":
     NUM_KEYPOINTS = 10
 
     extractor = TransfromationExtractor(path_json_rc, path_json_gt, scaling = True, num_keypoints=NUM_KEYPOINTS)
+
     extractor.check()
 
     extractor.extract()

@@ -58,7 +58,7 @@ if __name__ == '__main__':
         counts = counts[unique_labels >= 0]
         unique_labels = unique_labels[unique_labels >= 0]
 
-        print(unique_labels, counts, key)
+        #print(unique_labels, counts, key)
         # Case when there is multiple valid clustered classes --> simple idea: directly take the one with the most count
         if len(unique_labels) > 1:
             main_label = unique_labels[np.argmax(counts)]
@@ -86,4 +86,21 @@ if __name__ == '__main__':
         vis.append(pcd_tag)
 
 
-    o3d.visualization.draw_geometries(vis)
+    center_points = []
+    for points in registered_points.values():
+        center_point = np.mean(points, axis=0)
+        center_points.append(center_point)
+        
+    # print(np.array(center_points))
+
+    print(registered_points.keys())
+
+    print(np.mean(registered_points[0], axis=0))
+    print(np.mean(registered_points[2], axis=0))
+    print(np.mean(registered_points[5], axis=0))
+    print(np.mean(registered_points[3], axis=0))
+    print(np.mean(registered_points[1], axis=0))
+    print(np.mean(registered_points[4], axis=0))
+
+
+    #o3d.visualization.draw_geometries(vis)
