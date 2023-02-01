@@ -9,6 +9,22 @@ from Apriltag import colorbar, create_pcd
 import open3d as o3d
 from GT_Extration import rigid_transform_3D, draw_registration_result
 from scipy.optimize import minimize
+from math import sqrt
+
+def compute_error(keypoints_source, keypoints_target, R_opt, t_opt, s_opt):
+        n = keypoints_source.shape[0]
+        transformed_keypoints = keypoints_source * s_opt
+        transformed_keypoints = (R_opt * transformed_keypoints.T) + np.tile(t_opt, (1, n))
+        transformed_keypoints = transformed_keypoints.T
+
+        
+        err = keypoints_target - transformed_keypoints
+        err = np.multiply(err, err)
+        err = np.sum(err)
+        rmse = sqrt(err / n)
+
+
+        print("The RMSE error is: ", rmse)  
 
 def transform_3d(points1, points2):
     def objective(x):
@@ -239,7 +255,7 @@ if __name__ == "__main__":
 
     VIS_KEYPOINTS = True
 
-    print(s_opt)
+    compute_error(rc_points, gt_points, R_opt, t_opt, s_opt)
 
     if VIS_KEYPOINTS:
 

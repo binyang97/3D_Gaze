@@ -85,12 +85,16 @@ if __name__ == '__main__':
         pcd_tag = create_pcd(registered_points[tag_id], colorbar[i])
         vis.append(pcd_tag)
 
+    #o3d.visualization.draw_geometries(vis)
 
     center_points = []
     for points in registered_points.values():
         center_point = np.mean(points, axis=0)
         center_points.append(center_point)
-        
+
+    pcd_center = create_geometry_at_points(np.array(center_points), color = [0, 0,0], radius = 0.5)
+    o3d.visualization.draw_geometries([pcd_center])
+
     # print(np.array(center_points))
 
     print(registered_points.keys())
@@ -103,4 +107,4 @@ if __name__ == '__main__':
     print(np.mean(registered_points[4], axis=0))
 
 
-    #o3d.visualization.draw_geometries(vis)
+    
