@@ -8,7 +8,38 @@ from typing import List, Tuple, Dict
 from Apriltag import colorbar, create_pcd
 import open3d as o3d
 from GT_Extration import rigid_transform_3D, draw_registration_result
+from scipy.optimize import minimize
 
+def transform_3d(points1, points2):
+    def objective(x):
+        # Extract the rotation matrix, translation vector, and scale factor from the optimization variables
+        R = np.array([[x[0], x[1], x[2]], [x[3], x[4], x[5]], [x[6], x[7], x[8]]])
+        t = np.array([x[9], x[10], x[11]])
+        s = x[12]
+
+        # Transform the points using the rotation matrix, translation vector, and scale factor
+        transformed_points = s * np.dot(points1, R.T) + t
+
+        # Calculate the sum of squared differences between the transformed points and the target points
+        return np.sum((transformed_points - points2)**2)
+
+    # Set up the optimization constraints
+    cons = ({'type': 'eq', 'fun': lambda x: np.array([x[0]**2 + x[3]**2 + x[6]**2 - 1,
+                                                    x[1]**2 + x[4]**2 + x[7]**2 - 1,
+                                                    x[2]**2 + x[5]**2 + x[8]**2 - 1])},
+            {'type': 'ineq', 'fun': lambda x: x[12]})
+
+    # Minimize the objective function subject to the constraints
+    result = minimize(objective, np.zeros(13), method='SLSQP', constraints=cons)
+
+    # Extract the optimized rotation matrix, translation vector, and scale factor
+    R_opt = np.array([[result.x[0], result.x[1], result.x[2]],
+                    [result.x[3], result.x[4], result.x[5]],
+                    [result.x[6], result.x[7], result.x[8]]])
+    t_opt = np.array([result.x[9], result.x[10], result.x[11]])
+    s_opt = result.x[12]
+
+    return s_opt, R_opt, t_opt
 
 
 TagPose = collections.namedtuple(
@@ -199,9 +230,12 @@ if __name__ == "__main__":
                             [  6.40895162,  15.52132884 , -1.40985782]])
 
     s_opt, R_opt, t_opt = rigid_transform_3D(gt_points, rc_points, scale=True)
+    #s_opt, R_opt, t_opt = transform_3d(np.asarray(rc_points), np.asarray(gt_points))
+
+    print(t_opt)
 
     est_extrinsic = np.concatenate(
-                    [np.concatenate([R_opt, t_opt], axis=1), np.array([[0, 0, 0, 1]])], axis=0)
+                    [np.concatenate([R_opt, t_opt.reshape(3, 1)], axis=1), np.array([[0, 0, 0, 1]])], axis=0)
 
     VIS_KEYPOINTS = True
 
