@@ -162,8 +162,9 @@ def get_valid_3d_points(valid_ids, all_3d_keypoints):
     valid_points_3D_repro_error = np.array(valid_points_3D_repro_error)
     return valid_points_3D_xyz, valid_points_3D_repro_error, valid_points_3D_info
 
-def filter_registered_points(registered_points_xyz, registered_points_reprojection_error, visualization = False):
-     for key in registered_points_xyz.keys():
+def filter_registered_points(registered_points_xyz, registered_points_reprojection_error):
+    outliers = None
+    for key in registered_points_xyz.keys():
         point_cloud = registered_points_xyz[key]
         repro_error = registered_points_reprojection_error[key]
 
@@ -227,7 +228,7 @@ if __name__ == '__main__':
         database_path = r"D:\Documents\Semester_Project\3D_Gaze\dataset\PupilInvisible\room1\image_100_undistorted_prerecorded\Stereo_Fusion.min_num_pixels=10"
 
     VISUALIZATION_MASK = False
-    VISUALIZATION_3D = False
+    VISUALIZATION_3D = True
     TEST = False
 
 
@@ -302,7 +303,7 @@ if __name__ == '__main__':
     # with open(r"D:\Documents\Semester_Project\3D_Gaze\dataset\PupilInvisible\room1\apriltags_repro_error.json", "w") as outfile:
     #    json.dump({k: v.tolist() for k, v in registered_3d_points_repro_error.items()}, outfile, indent=4)
 
-    filtered_registered_tag_points_xyz, outliers_xyz = filter_registered_points(registered_3d_points_xyz, registered_3d_points_repro_error, visualization = False)
+    filtered_registered_tag_points_xyz, outliers_xyz = filter_registered_points(registered_3d_points_xyz, registered_3d_points_repro_error)
 
     pcd_copy = copy.deepcopy(pcd_rc)
     pcd_rc.paint_uniform_color(np.array([220, 220 ,220])/255)

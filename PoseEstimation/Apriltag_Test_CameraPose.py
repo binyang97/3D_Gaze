@@ -153,7 +153,7 @@ if __name__ == "__main__":
     for i, image_fullpath in enumerate(image_list):
     
         img = cv2.imread(image_fullpath, cv2.IMREAD_GRAYSCALE)
-        tags = at_detector.detect(img, estimate_tag_pose=True, camera_params = camera_params, tag_size=0.01)
+        tags = at_detector.detect(img, estimate_tag_pose=True, camera_params = camera_params, tag_size=0.02)
         tags_in_image = []
         tags_id_in_image = []
         for tag in tags:
