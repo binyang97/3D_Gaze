@@ -146,8 +146,8 @@ if __name__ == "__main__":
 
     elif platform == "win32":
     # Windows...
-        datapath = r"D:\Documents\Semester_Project\3D_Gaze\dataset\PupilInvisible\raw_data\2021-05-20-15-21-50\exports\000"
-        output_path = r"D:\Documents\Semester_Project\3D_Gaze\dataset\PupilInvisible/room1_v3"
+        datapath = r"D:\Documents\Semester_Project\3D_Gaze\dataset\PupilInvisible\raw_data\office_2\2023-02-03-12-33-29\exports\000"
+        output_path = r"D:\Documents\Semester_Project\3D_Gaze\dataset\PupilInvisible\office2\data_2"
 
     
 
@@ -160,6 +160,6 @@ if __name__ == "__main__":
 
     
     data = DataPreprocessor(datapath, output_path)
-    #data.extract_gaze()
+    data.extract_gaze()
     data.extract_frames()
     

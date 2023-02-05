@@ -2,7 +2,7 @@ import os
 import numpy as np
 import json
 import open3d as o3d
-from Apriltag import *
+from Apriltag.Apriltag_Colmap import *
 from sklearn.cluster import DBSCAN
 from numpy import unique
 

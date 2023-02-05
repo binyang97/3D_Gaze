@@ -3,7 +3,7 @@ from sys import platform
 from glob import glob
 import cv2
 import os
-from Colmap_Reader import ColmapReader
+from PoseEstimation.Colmap_Reader import ColmapReader
 from sklearn.cluster import DBSCAN
 import numpy as np
 import collections
