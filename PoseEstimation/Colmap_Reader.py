@@ -14,8 +14,6 @@ from colmap_read_write_model import read_model, detect_model_format
 import open3d as o3d
 
 
-####### Not in used ######################
-
 '''Read the colmap data, give the path to the workspace of colmap reconstruction
 '''
 

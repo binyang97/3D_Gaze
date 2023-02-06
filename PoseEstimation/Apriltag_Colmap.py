@@ -1,15 +1,16 @@
 from pupil_apriltags import Detector, Detection
-from sys import platform
+from sys import platform, path
 from glob import glob
 import cv2
 import os
-from PoseEstimation.Colmap_Reader import ColmapReader
 from sklearn.cluster import DBSCAN
 import numpy as np
 import collections
 import open3d as o3d
 import copy
 import json
+
+from Colmap_Reader import ColmapReader
 
 Mask = collections.namedtuple(
     "Mask", ["tag_id", "tag_corners", "tag_center", "pixels_inside_tag", "mask"])
@@ -72,6 +73,7 @@ def visualize_2d(img_grayscale, tags):
                 color=(0, 0, 255),
             )
 
+    cv2.namedWindow("Detected tags", cv2.WINDOW_NORMAL) 
     cv2.imshow("Detected tags", color_img)
 
     k = cv2.waitKey(0)
