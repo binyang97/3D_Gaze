@@ -14,7 +14,8 @@ if __name__=="__main__":
 
     if platform == "linux" or platform == "linux2":  
     # linux
-        pass
+        rawdata_path = r"/home/biyang/Documents/3D_Gaze/dataset/3D_scanner_app/2023_02_03_12_36_28-20230203T204041Z-001/2023_02_03_12_36_28"
+        output_path= r"/home/biyang/Documents/3D_Gaze/dataset/3D_scanner_app"
 
     elif platform == "win32":
     # Windows...
