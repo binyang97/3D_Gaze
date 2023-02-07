@@ -24,7 +24,7 @@ class ScannerApp_Reader:
 if __name__ == '__main__':
     if platform == "linux" or platform == "linux2":  
     # linux
-        data_path  = ""
+        data_path  = "/home/biyang/Documents/3D_Gaze/dataset/3D_scanner_app/Test2"
     elif platform == "win32":
     # Windows...
         data_path = r"D:\Documents\Semester_Project\3D_Gaze\dataset\3D_Scanner_App\Test2"
@@ -41,7 +41,7 @@ if __name__ == '__main__':
 
     images_files.sort()
 
-    index = 0
+    index = 219
 
     image_file = images_files[index]
     camera_param_file = image_file.replace(".jpg", ".json")
@@ -75,7 +75,7 @@ if __name__ == '__main__':
     
     ext = np.array(camera_param["cameraPoseARFrame"]).reshape(4, 4)
 
-    tag = tags[0]
+    tag = tags[1]
     t_tag2cam = np.array(tag.pose_t).reshape(3, 1)   
     R_tag2cam = np.array(tag.pose_R)
 
@@ -84,19 +84,24 @@ if __name__ == '__main__':
 
     Cam2Tag = np.concatenate(
                     [np.concatenate([R_cam2tag, t_cam2tag], axis=1), np.array([[0, 0, 0, 1]])], axis=0)
-    tag_position_cam =t_cam2tag
+    tag_position_cam = t_cam2tag
 
     r = R.from_euler('xyz', [0, 180, -90], degrees=True)
     Additional_Rotation = r.as_matrix()
-    additional_extrinsic = np.concatenate(
-                    [np.concatenate([Additional_Rotation, np.zeros((3, 1))], axis=1), np.array([[0, 0, 0, 1]])], axis=0)
+
+    additional_rotation = np.concatenate(
+                    [np.concatenate([Additional_Rotation, np.zeros((3,1))], axis=1), np.array([[0, 0, 0, 1]])], axis=0)
+    
+    World2Cam = ext @ additional_rotation
 
     
-    World2Cam = ext @ additional_extrinsic
     R_world2cam = World2Cam[:3, :3]
     t_world2cam = World2Cam[:3, 3].reshape(3, 1)
     R_cam2world = R_world2cam.T
     t_cam2world = -R_cam2world @ t_world2cam
+
+    Cam2World = np.concatenate(
+                    [np.concatenate([R_cam2world, t_cam2world], axis=1), np.array([[0, 0, 0, 1]])], axis=0)
 
     tag_position_world = R_cam2world @ tag_position_cam + t_cam2world
 
@@ -132,13 +137,14 @@ if __name__ == '__main__':
         ''' 
     if VISUALIZATION:
         mesh = o3d.io.read_triangle_mesh(mesh_fullpath, True)
+        mesh.transform(Cam2World)
         
         coordinate = mesh.create_coordinate_frame(size=1.0, origin=np.array([0., 0., 0.]))
 
-        coordinate.transform(Cam2Tag @ World2Cam)
-        print(ext[:3, 3])
+        #coordinate.transform(World2Cam)
+        
 
-        center_vis = create_geometry_at_points([ext[:3, 3], tag_position_world], color = [1, 0, 0], radius=0.1)
+        center_vis = create_geometry_at_points([tag_position_cam], color = [1, 0, 0], radius=0.05)
 
         o3d.visualization.draw_geometries([mesh, coordinate, center_vis])
 
