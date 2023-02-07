@@ -27,37 +27,10 @@ if __name__ == '__main__':
         data_path  = "/home/biyang/Documents/3D_Gaze/dataset/3D_scanner_app/Test2"
     elif platform == "win32":
     # Windows...
-        data_path = r"D:\Documents\Semester_Project\3D_Gaze\dataset\3D_Scanner_App\Test2"
+        data_path = r"D:\Documents\Semester_Project\3D_Gaze\dataset\3D_Scanner_App\Apriltag1-dataset2"
 
+    # Getting the Visualization
     VISUALIZATION = True
-
-    images_path = os.path.join(data_path, "frames")
-    pose_path = os.path.join(data_path, "pose")
-    mesh_fullpath = os.path.join(data_path, "data3d/textured_output.obj")
-
-    
-
-    images_files = os.listdir(images_path)
-
-    images_files.sort()
-
-    index = 219
-
-    image_file = images_files[index]
-    camera_param_file = image_file.replace(".jpg", ".json")
-
-    print(image_file)
-    
-
-    img = cv2.imread(os.path.join(images_path, image_file), cv2.IMREAD_GRAYSCALE)
-    with open(os.path.join(pose_path, camera_param_file), 'r') as f:
-        camera_param = json.load(f)
-
-    intrinsics = np.array(camera_param["intrinsics"]).reshape(3, 3)
-    print(intrinsics)
-
-    fxfycxcy= [intrinsics[0, 0], intrinsics[1, 1], intrinsics[0, 2], intrinsics[1, 2]]
-
 
     at_detector = Detector(
             families="tagStandard41h12",
@@ -69,49 +42,83 @@ if __name__ == '__main__':
             debug=0,
         )
 
-    # The real size of the tag is about 8.7 cm
-    tags = at_detector.detect(img, estimate_tag_pose=True, camera_params = fxfycxcy, tag_size=0.087)
+
+    images_path = os.path.join(data_path, "frames")
+    pose_path = os.path.join(data_path, "pose")
+    mesh_fullpath = os.path.join(data_path, "data3d/textured_output.obj")
+    depth_path = os.path.join(data_path, "depth")
 
     
-    ext = np.array(camera_param["cameraPoseARFrame"]).reshape(4, 4)
 
-    tag = tags[1]
-    t_tag2cam = np.array(tag.pose_t).reshape(3, 1)   
-    R_tag2cam = np.array(tag.pose_R)
+    images_files = os.listdir(images_path)
 
-    R_cam2tag = R_tag2cam.T
-    t_cam2tag = -R_tag2cam.T @ t_tag2cam
+    images_files.sort()
 
-    Cam2Tag = np.concatenate(
-                    [np.concatenate([R_cam2tag, t_cam2tag], axis=1), np.array([[0, 0, 0, 1]])], axis=0)
-    tag_position_cam = t_cam2tag
-
+    tag_points_3d = []
+    projected_points_3d = []
     r = R.from_euler('xyz', [0, 180, -90], degrees=True)
     Additional_Rotation = r.as_matrix()
 
     additional_rotation = np.concatenate(
                     [np.concatenate([Additional_Rotation, np.zeros((3,1))], axis=1), np.array([[0, 0, 0, 1]])], axis=0)
-    
-    World2Cam = ext @ additional_rotation
+    for i, image_file in enumerate(images_files):
+        if i%10 != 0:
+            continue
+
+
+        camera_param_file = image_file.replace(".jpg", ".json")
+        depth_file = image_file.replace("frame", "depth")
+        #depth_file = depth_file.replace(".jpg", ".png")
+
+        #print(depth_file)
+
+
+        img = cv2.imread(os.path.join(images_path, image_file), cv2.IMREAD_GRAYSCALE)
+        #depth = cv2.imread(os.path.join(depth_path, depth_file))
+        #print(np.unique(depth))
+
+        img_height, img_width = img.shape
+        with open(os.path.join(pose_path, camera_param_file), 'r') as f:
+            camera_param = json.load(f)
+
+        intrinsics = np.array(camera_param["intrinsics"]).reshape(3, 3)
+
+        fxfycxcy= [intrinsics[0, 0], intrinsics[1, 1], intrinsics[0, 2], intrinsics[1, 2]]
+
+
+        projectionMatrix = np.array(camera_param["projectionMatrix"]).reshape(4, 4)
+
+
 
     
-    R_world2cam = World2Cam[:3, :3]
-    t_world2cam = World2Cam[:3, 3].reshape(3, 1)
-    R_cam2world = R_world2cam.T
-    t_cam2world = -R_cam2world @ t_world2cam
+        # The real size of the tag is about 8.7 cm
+        tags = at_detector.detect(img, estimate_tag_pose=True, camera_params = fxfycxcy, tag_size=0.087)
 
-    Cam2World = np.concatenate(
-                    [np.concatenate([R_cam2world, t_cam2world], axis=1), np.array([[0, 0, 0, 1]])], axis=0)
+        if len(tags) == 0:
+            continue
+        # cam2world
+        ext = np.array(camera_param["cameraPoseARFrame"]).reshape(4, 4)
+        
+        Cam2World = ext @ additional_rotation
 
-    tag_position_world = R_cam2world @ tag_position_cam + t_cam2world
+        for tag in tags:
+            tag_position_cam = np.concatenate((np.array(tag.pose_t), np.ones((1, 1))), axis = 0 )
+            tag_position_world = Cam2World@tag_position_cam
+            
+            tag_points_3d.append(tag_position_world[:3])
 
-    tag_position_world = -tag_position_world.reshape(-1)
+            tag_center = np.concatenate((np.array(tag.center), np.ones(2))).reshape(4, 1)
+            tag_center[0] = tag_center[0]/img_height
+            tag_center[1] = tag_center[1]/img_width
 
-    print(tag_position_world)
+            tag_center_3d = projectionMatrix @ tag_center
 
+            projected_points_3d.append(tag_center_3d[:3])
 
+    print(projected_points_3d)        
     
-    
+
+
 
     # x, y, z axis will be rendered as red, green, and blue
 
@@ -137,16 +144,17 @@ if __name__ == '__main__':
         ''' 
     if VISUALIZATION:
         mesh = o3d.io.read_triangle_mesh(mesh_fullpath, True)
-        mesh.transform(Cam2World)
+        #
+        # mesh.transform(Cam2World)
         
         coordinate = mesh.create_coordinate_frame(size=1.0, origin=np.array([0., 0., 0.]))
-
-        #coordinate.transform(World2Cam)
         
 
-        center_vis = create_geometry_at_points([tag_position_cam], color = [1, 0, 0], radius=0.05)
+        tag_points = create_geometry_at_points(tag_points_3d, color = [1, 0, 0], radius=0.05)
+        projected_points = create_geometry_at_points(projected_points_3d, color = [0, 1, 0], radius = 0.05)
 
-        o3d.visualization.draw_geometries([mesh, coordinate, center_vis])
+
+        o3d.visualization.draw_geometries([mesh, coordinate, tag_points, projected_points])
 
 
     
