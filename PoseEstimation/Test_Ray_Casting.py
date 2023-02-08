@@ -12,7 +12,7 @@ import copy
 
 if platform == "linux" or platform == "linux2":  
     # linux
-        data_path  = "/home/biyang/Documents/3D_Gaze/dataset/3D_scanner_app/Test2"
+        data_path  = "/home/biyang/Documents/3D_Gaze/dataset/3D_scanner_app/Apriltag1-dataset2"
 elif platform == "win32":
 # Windows...
     data_path = r"D:\Documents\Semester_Project\3D_Gaze\dataset\3D_Scanner_App\Apriltag1-dataset2"
@@ -37,7 +37,8 @@ images_files = os.listdir(images_path)
 
 images_files.sort()
 
-index = 82
+#index = 82
+index = 0
 
 image_file = images_files[index]
 
@@ -50,6 +51,8 @@ img = cv2.imread(os.path.join(images_path, image_file), cv2.IMREAD_GRAYSCALE)
 img_height, img_width = img.shape
 
 tags = at_detector.detect(img)
+
+visualize_2d(img, tags)
 tag = tags[0]
 
 with open(os.path.join(pose_path, camera_param_file), 'r') as f:
@@ -71,8 +74,8 @@ World2Cam = np.concatenate(
 tag_center = np.array(tag.center).reshape(2,1)
 
 #print(tag_center)
-#tag_center[0] = (tag_center[0]-intrinsics[0, 2])/img_width
-#tag_center[1] = (tag_center[1]-intrinsics[1, 2])/img_height
+#tag_center[0] = img_width - tag_center[0]
+#tag_center[1] = img_height - tag_center[1]
 #print(tag_center)
 
 uv = np.concatenate((tag_center, np.ones((1,1))), axis = 0)
@@ -83,6 +86,9 @@ project_point_cam = K_inv @ uv
 project_point_cam = np.concatenate((project_point_cam, np.ones((1,1))), axis = 0)
 project_point_world = Cam2World @ project_point_cam
 
+back_project_2d = projectionMatrix @ project_point_world
+print(project_point_world)
+
 project_point_world = project_point_world[:3]
 camera_origin_world = Cam2World[:3, 3].reshape(3, 1)
 
@@ -91,12 +97,31 @@ direction = project_point_world - camera_origin_world
 direction_normalized = -direction / np.linalg.norm(direction)
 
 
-print(direction_normalized)
+print(back_project_2d)
+print(project_point_cam)
+
+
+x = back_project_2d[0]
+y = back_project_2d[1]
+w = back_project_2d[2]
+new_x = (x * img_width) / (2.0 * w) + img_width/2
+new_y = (y * img_height) / (2.0 * w) + img_height/2
+
+print(new_x, new_y)
+print(uv)
+exit()
+
+
+# print(direction_normalized)
+
+# direction_cam = - project_point_cam[:3]
+# direction_cam_normalized = direction_cam / np.linalg.norm(direction_cam)
 
 
 
 
 mesh =  o3d.io.read_triangle_mesh(mesh_fullpath, True)
+mesh.transform(World2Cam)
 mesh_in_scene = copy.deepcopy(mesh)
 mesh_in_scene = o3d.t.geometry.TriangleMesh.from_legacy(mesh_in_scene)
 # Create scene and add the cube mesh
@@ -104,7 +129,8 @@ scene = o3d.t.geometry.RaycastingScene()
 scene.add_triangles(mesh_in_scene)
 
 ray_origin_direction = np.concatenate((camera_origin_world.reshape(-1), direction_normalized.reshape(-1)), axis=0)
-
+#ray_origin_direction = np.concatenate((np.zeros(3), direction_cam_normalized.reshape(-1)), axis=0)
+print(ray_origin_direction)
 
 
 rays = o3d.core.Tensor([ray_origin_direction],
@@ -118,6 +144,8 @@ depth = ans['t_hit'].numpy()[-1] # z-axis points to the
 
 target_point_3d = camera_origin_world + direction_normalized*depth
 
+#target_point_3d = direction_cam_normalized*depth
+
 VISUALIZATION = True
 
 if VISUALIZATION:
@@ -129,6 +157,7 @@ if VISUALIZATION:
         
 
         tag_points = create_geometry_at_points([target_point_3d, camera_origin_world, project_point_world], color = [1, 0, 0], radius=0.05)
+        #tag_points = create_geometry_at_points([target_point_3d, np.zeros((3,1)), project_point_cam[:3]], color = [1, 0, 0], radius=0.1)
 
 
         o3d.visualization.draw_geometries([mesh, coordinate, tag_points])

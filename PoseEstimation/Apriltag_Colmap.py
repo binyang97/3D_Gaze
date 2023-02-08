@@ -60,6 +60,7 @@ def visualize_2d(img_grayscale, tags):
                     tuple(tag.corners[idx, :].astype(int)),
                     (0, 255, 0),
                 )
+            cv2.circle(color_img,tuple(tag.center.astype(int)), 5, (0,255,0), -1)
 
             cv2.putText(
                 color_img,
