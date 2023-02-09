@@ -5,11 +5,43 @@ from load_ARSceneData import LoadARSceneData
 import cv2
 import open3d as o3d
 import trimesh
-import pyrender
 import re
 import os
 import open3d.visualization.rendering as rendering
 from scipy.spatial.transform import Rotation as R
+
+
+def render_image(K, width, height, mesh):
+
+    render = rendering.OffscreenRenderer(width, height)
+        
+    # Pick a background colour of the rendered image, I set it as black (default is light gray)
+    render.scene.set_background([0.0, 0.0, 0.0, 1.0])  # RGBA
+
+    # now create your mesh
+    mesh = o3d.io.read_triangle_mesh(mesh_path)
+
+    # The default camera coordinate of open3d and ARKit Scene are different
+
+    #mesh.transform(est_extrinsic)
+    #mesh.paint_uniform_color([1.0, 0.0, 0.0]) # set Red color for mesh 
+    # define further mesh properties, shape, vertices etc  (omitted here)  
+
+    # Define a simple unlit Material.
+    # (The base color does not replace the mesh's own colors.)
+    mtl = o3d.visualization.rendering.MaterialRecord()
+    mtl.base_color = [1.0, 1.0, 1.0, 1.0]  # RGBA
+    mtl.shader = "defaultUnlit"
+
+    # add mesh to the scene
+    render.scene.add_geometry("MyMeshModel", mesh, mtl)
+    #render.scene.add_geometry(mesh)
+
+    # render the scene with respect to the camera
+    render.scene.camera.set_projection(K, 0.1, 1.0, width, height)
+    img_o3d = render.render_to_image()
+
+    o3d.visualization.draw_geometries([img_o3d])
 
 if __name__ == "__main__":
     ARKitSceneDataID = "40777060"
