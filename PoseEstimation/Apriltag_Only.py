@@ -79,7 +79,7 @@ if __name__ == '__main__':
     images_files.sort()
 
     tag_points_3d = []
-    projected_points_3d = []
+
     r = R.from_euler('xyz', [0, 180, -90], degrees=True)
     Additional_Rotation = r.as_matrix()
 
@@ -98,7 +98,7 @@ if __name__ == '__main__':
         print("There is no extrinsic matrix and 3d model for data recorded by PI, so there is no 3d visualization, only visulization with tag pose")
 
     for i, image_file in enumerate(images_files):
-        if i%10 != 0:
+        if i%100 != 0:
             continue
         
 
@@ -142,6 +142,7 @@ if __name__ == '__main__':
 
         for tag in tags:
             tag_position_cam = np.concatenate((np.array(tag.pose_t), np.ones((1, 1))), axis = 0 )
+            #tag_position_cam2 = -np.array(tag.pose_R).T @ np.array(tag.pose_t)
             tag_position_world = Cam2World@tag_position_cam
             
             tag_points_3d.append(tag_position_world[:3])
@@ -149,10 +150,6 @@ if __name__ == '__main__':
             tag_center = np.concatenate((np.array(tag.center), np.ones(2))).reshape(4, 1)
             tag_center[0] = tag_center[0]/img_height
             tag_center[1] = tag_center[1]/img_width
-
-            tag_center_3d = projectionMatrix @ tag_center
-
-            projected_points_3d.append(tag_center_3d[:3])
 
 
             # Visualize the axis and cube on the tags
@@ -198,9 +195,7 @@ if __name__ == '__main__':
 
     # cv2.destroyAllWindows()
     # video.release()
-
-
-    print(projected_points_3d)        
+       
     
 
 
@@ -230,12 +225,13 @@ if __name__ == '__main__':
     if VISUALIZATION:
         mesh = o3d.io.read_triangle_mesh(mesh_fullpath, True)
         #
-        # mesh.transform(Cam2World)
+        mesh.transform(np.linalg.inv(Cam2World))
         
         coordinate = mesh.create_coordinate_frame(size=1.0, origin=np.array([0., 0., 0.]))
         
 
         tag_points = create_geometry_at_points(tag_points_3d, color = [1, 0, 0], radius=0.05)
+        #tag_point_cam = create_geometry_at_points([tag_position_cam[:3]], color = [1, 0, 0], radius=0.05)
         #projected_points = create_geometry_at_points(projected_points_3d, color = [0, 1, 0], radius = 0.05)
 
 
