@@ -11,9 +11,30 @@ from glob import glob
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 from Apriltag_Colmap import create_geometry_at_points, visualize_2d, colorbar
+from matplotlib import pyplot as plt
+import math
 
 
+def linear_fit(x, y, err = "Mean"):
+    """For set of points `(xi, yi)`, return linear polynomial `f(x) = k*x + m` that
+    minimizes the sum of quadratic errors.
+    """
+    meanx = sum(x) / len(x)
+    meany = sum(y) / len(y)
+    k = sum((xi-meanx)*(yi-meany) for xi,yi in zip(x,y)) / sum((xi-meanx)**2 for xi in x)
+    m = meany - k*meanx
 
+    sum_error = 0
+    for xi, yi in zip(x,y):
+        y_line = k*xi + m
+        sum_error += abs(y_line - yi)
+    
+    if err == "Mean":
+        error = sum_error / len(x)
+    elif err == "Sum":
+        error = sum_error
+
+    return k, m, error
 
 class ScannerApp_Reader:
     def __init__(self, datapath) -> None:
@@ -49,8 +70,10 @@ if __name__ == '__main__':
 
     # Getting the Visualization
     VISUALIZATION = False
-    TAG_POSE_VISUALIZATION = True
+    TAG_POSE_VISUALIZATION = False
     DATA = "IPHONE" # "PI" or "IPHONE"
+
+    Evaluation = {}
 
     at_detector = Detector(
             families="tagStandard41h12",
@@ -73,18 +96,15 @@ if __name__ == '__main__':
         data_path = data_pi_path
         images_path = os.path.join(data_path, "images_undistorted")
     
+    tag_sizes = np.arange(0.05, 0.11, 0.01)
+    real_tag_size = 0.087
+
 
     images_files = os.listdir(images_path)
 
     images_files.sort()
 
     tag_points_3d = []
-
-    r = R.from_euler('xyz', [0, 180, -90], degrees=True)
-    Additional_Rotation = r.as_matrix()
-
-    additional_rotation = np.concatenate(
-                    [np.concatenate([Additional_Rotation, np.zeros((3,1))], axis=1), np.array([[0, 0, 0, 1]])], axis=0)
 
     Vis_frames = []
     if DATA == "IPHONE":
@@ -98,8 +118,8 @@ if __name__ == '__main__':
         print("There is no extrinsic matrix and 3d model for data recorded by PI, so there is no 3d visualization, only visulization with tag pose")
 
     for i, image_file in enumerate(images_files):
-        if i%10 != 0:
-            continue
+        # if i%10 != 0:
+        #     continue
         
 
         img = cv2.imread(os.path.join(images_path, image_file), cv2.IMREAD_GRAYSCALE)
@@ -123,127 +143,105 @@ if __name__ == '__main__':
             projectionMatrix = np.eye(4)
             
         fxfycxcy= [intrinsics[0, 0], intrinsics[1, 1], intrinsics[0, 2], intrinsics[1, 2]]
+        principal_point = np.array([intrinsics[0, 2], intrinsics[1, 2]])
+        focal_length = (intrinsics[0, 0] + intrinsics[1, 1]) / 2
     
         # The real size of the tag is about 8.7 cm
-        tag_sizes = np.arange(0.05, 0.16, 0.01)
-        
-        for tag_size in tag_sizes:
-            tags = at_detector.detect(img, estimate_tag_pose=True, camera_params = fxfycxcy, tag_size=tag_size)
-            true_distances = []
-            for tag in tags:
-                print(tag.corners)
-                exit()
-        tags = at_detector.detect(img, estimate_tag_pose=True, camera_params = fxfycxcy, tag_size=0.087)
-
-        if len(tags) == 0:
-            Vis_frames.append(color_img)
+        tags_real = at_detector.detect(img, estimate_tag_pose=True, camera_params = fxfycxcy, tag_size=real_tag_size)
+        if len(tags_real) == 0:
             continue
-        # cam2world
+        
+        alpha_real = []
+        for tag_real in tags_real:
+            tag_id = tag_real.tag_id
+            if tag_id not in Evaluation.keys():
+                Evaluation[tag_id] = {"Real_Distance": [],
+                                        "Frame_id": [],
+                                        "Error_Stability": [],
+                                        "Error_Accuracy": [],
+                                        "angle_x": [],
+                                        "angle_y": [],
+                                        "angle_z": []}
 
-        if DATA == "IPHONE":
-            ext = np.array(camera_param["cameraPoseARFrame"]).reshape(4, 4)      
-            Cam2World = ext @ additional_rotation
+                # Add the real distance
+            # Project the line onto the plane which is parallel to the image plane
 
-        if DATA == "PI":
-            Cam2World = np.eye(4)
+            R_tag2cam = np.array(tag_real.pose_R)
+            t_tag2cam = np.array(tag_real.pose_t)
 
+            r = R.from_matrix(R_tag2cam)
+            euler_angles = r.as_euler('xyz', degrees=True)
 
-        for tag in tags:
-            tag_position_cam = np.concatenate((np.array(tag.pose_t), np.ones((1, 1))), axis = 0 )
-            #tag_position_cam2 = -np.array(tag.pose_R).T @ np.array(tag.pose_t)
-            tag_position_world = Cam2World@tag_position_cam
+            Evaluation[tag_id]["Real_Distance"].append(np.linalg.norm(t_tag2cam))
+            Evaluation[tag_id]["Frame_id"].append(image_file)
+            Evaluation[tag_id]["angle_x"].append(euler_angles[0])
+            Evaluation[tag_id]["angle_y"].append(euler_angles[1])
+            Evaluation[tag_id]["angle_z"].append(euler_angles[2])
+
+            tag_corner = np.array(tag_real.corners[0]) # 0: right bottom, 1: right top, 2: left top, 3: left bottom
+            tag_center = np.array(tag_real.center)
+            tag_corner_tag_coord = np.array([[1], [1], [0]]) * (real_tag_size/2)
+            tag_corner_cam_coord = R_tag2cam @ tag_corner_tag_coord + t_tag2cam
+            tag_center_cam_coord = t_tag2cam
+
+            delta_l = math.sqrt(math.pow((tag_corner_cam_coord[0]*tag_center_cam_coord[2]/tag_corner_cam_coord[2] - tag_center_cam_coord[0]), 2) +
+                                math.pow((tag_corner_cam_coord[1]*tag_center_cam_coord[2]/tag_corner_cam_coord[2] - tag_center_cam_coord[1]), 2))
+
             
-            tag_points_3d.append(tag_position_world[:3])
+            delta_d = math.sqrt(math.pow(focal_length, 2) + math.pow(np.linalg.norm(tag_center - principal_point), 2))
+            delta_uv_tag = np.linalg.norm(tag_corner-tag_center)
+            alpha_real.append((delta_l / real_tag_size) * (delta_d / delta_uv_tag))
 
-            tag_center = np.concatenate((np.array(tag.center), np.ones(2))).reshape(4, 1)
-            tag_center[0] = tag_center[0]/img_height
-            tag_center[1] = tag_center[1]/img_width
-
-
-            # Visualize the axis and cube on the tags
-            R_tag2cam = np.array(tag.pose_R)
-            t_tag2cam = np.array(tag.pose_t).reshape(3, 1)
-
-            R_cam2tag = R_tag2cam.T
-            t_cam2tag = -R_tag2cam.T @ t_tag2cam
-
-            if TAG_POSE_VISUALIZATION:
-
-                axis = np.float32([[1,0,0], [0,1,0], [0,0,1]]).reshape(-1,3) * 0.5
-                #rot_vec,_ = cv2.Rodrigues(tag.pose_R)
-                imgpts, _ = cv2.projectPoints(axis, R_tag2cam, t_tag2cam.reshape(-1), intrinsics, 0)
-                color_img = draw_axis(color_img, tag.center.astype(int), imgpts.astype(int))
-
-
-                axis_cube = np.float32([[-1,-1,0], [-1,1,0], [1,1,0], [1,-1,0],
-                    [-1,-1,-2],[-1,1,-2],[1,1,-2],[1,-1,-2] ]) * 0.5 * 0.087
-
-
-                imgpts_cube, _= cv2.projectPoints(axis_cube, R_tag2cam, t_tag2cam.reshape(-1), intrinsics, 0)
-
-                color_img = draw_cube(color_img, imgpts_cube.astype(int))          
-
-        if TAG_POSE_VISUALIZATION:
+            
         
-            #cv2.namedWindow("Detected tags", cv2.WINDOW_NORMAL) 
-            cv2.imshow("Detected tags", cv2.resize(color_img, (720, 960)))
+        true_distances = []
+        for tag_size in tag_sizes:   
+            
+            tags = at_detector.detect(img, estimate_tag_pose=True, camera_params = fxfycxcy, tag_size=tag_size)
+            
+            # Test with only one tag
+            for tag_test in tags:
+                
+                tag_position = np.array(tag_test.pose_t)
+                tag_cam_distance = np.linalg.norm(tag_position)
+                true_distances.append(tag_cam_distance)
 
-            k = cv2.waitKey(0)
-            cv2.destroyAllWindows()
-
-            #Vis_frames.append(color_img)
-
-    # video_output_path = os.path.join(data_path, "video_axis.mp4")
-
-    # fps = 10
-    # video = cv2.VideoWriter(video_output_path,-1,fps,(img_width, img_height))
-
-    # for frame in Vis_frames:
-    #     video.write(frame)
-
-    # cv2.destroyAllWindows()
-    # video.release()
-       
-    
+        true_distances = np.array(true_distances).reshape(-1, len(tags))
+        print(true_distances.shape)
+        for i, tag in enumerate(tags_real):
+            alpha_test, _, err = linear_fit(tag_sizes, true_distances[:,i])
+            alpha_error = abs(alpha_real[i] - alpha_test) / alpha_real[i]
+            
 
 
-
-    # x, y, z axis will be rendered as red, green, and blue
-
-    # The camera coordinates in apriltag and 3d-scanner app are set differently 
-    # So there is an additional Rotation that has to be applied in transformation
-    '''
-    Apriltag coordinate                     
-            z  
-            |         
-            . y -------- .
-            |/    ip    /
-            o -------- x
-
-    3D Scanner App Coordinate
-
-             x -------- .
-            /   ip     /
-           o -------- y
-           |
-           .
-           |
-           z
-        ''' 
-    if VISUALIZATION:
-        mesh = o3d.io.read_triangle_mesh(mesh_fullpath, True)
-        #
-        mesh.transform(np.linalg.inv(Cam2World))
-        
-        coordinate = mesh.create_coordinate_frame(size=1.0, origin=np.array([0., 0., 0.]))
+            Evaluation[tag.tag_id]["Error_Stability"].append(err)
+            Evaluation[tag.tag_id]["Error_Accuracy"].append(alpha_error)
+            
         
 
-        tag_points = create_geometry_at_points(tag_points_3d, color = [1, 0, 0], radius=0.05)
-        #tag_point_cam = create_geometry_at_points([tag_position_cam[:3]], color = [1, 0, 0], radius=0.05)
-        #projected_points = create_geometry_at_points(projected_points_3d, color = [0, 1, 0], radius = 0.05)
+    with open(r"D:\Documents\Semester_Project\3D_Gaze\dataset\3D_Scanner_App\evaluation_apriltag_detection_Iphone.json", "w") as outfile:
+         json.dump(Evaluation, outfile, indent=4)
 
 
-        o3d.visualization.draw_geometries([mesh, coordinate, tag_points])
+        
+        
+
+
+
+
+
+        
+
+        
+        # plt.plot(tag_sizes, true_distances, "bo")
+        # plt.xlabel("tag size")
+        # plt.ylabel("true distance")
+        # plt.title(image_file + " and tag id: " + str(tag_id))
+        # plt.show()
+        
+        
+        # cam2worl
+
 
 
     

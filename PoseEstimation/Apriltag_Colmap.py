@@ -61,6 +61,7 @@ def visualize_2d(img_grayscale, tags):
                     (0, 255, 0),
                 )
             cv2.circle(color_img,tuple(tag.center.astype(int)), 5, (0,255,0), -1)
+            cv2.circle(color_img,tuple(tag.corners[1].astype(int)), 5, (255,0,0), -1)
 
             cv2.putText(
                 color_img,
@@ -231,8 +232,8 @@ if __name__ == '__main__':
         database_path = r"D:\Documents\Semester_Project\3D_Gaze\dataset\PupilInvisible\room1\image_100_undistorted_prerecorded\Stereo_Fusion.min_num_pixels=10"
 
     VISUALIZATION_MASK = False
-    VISUALIZATION_3D = True
-    TEST = False
+    VISUALIZATION_3D = False
+    TEST = True
 
 
     database_colmap = ColmapReader(database_path)
