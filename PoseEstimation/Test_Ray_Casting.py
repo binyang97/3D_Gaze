@@ -29,7 +29,7 @@ def project_point_mvp(p_in, mvp, image_width, image_height):
 
 if platform == "linux" or platform == "linux2":  
     # linux
-        data_path  = "/home/biyang/Documents/3D_Gaze/dataset/3D_scanner_app/Apriltag1-dataset1"
+    data_path  = "/home/biyang/Documents/3D_Gaze/dataset/3D_scanner_app/Apriltag1_dataset1"
 elif platform == "win32":
 # Windows...
     data_path = r"D:\Documents\Semester_Project\3D_Gaze\dataset\3D_Scanner_App\Apriltag1_dataset1"
@@ -177,29 +177,29 @@ target_point_3d = camera_origin_world + direction_normalized*depth
 
 
 # Test
-target_point_3d = target_point_3d + np.array([0.1, 0, 0.6]).reshape(3, 1)
-mvp = np.dot(projectionMatrix, np.linalg.inv(Cam2World))
-new_x, new_y = project_point_mvp(target_point_3d, mvp, img_width, img_height)
+#target_point_3d = target_point_3d + np.array([0.1, 0, 0.6]).reshape(3, 1)
+# mvp = np.dot(projectionMatrix, np.linalg.inv(Cam2World))
+# new_x, new_y = project_point_mvp(target_point_3d, mvp, img_width, img_height)
 
 
-color_img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
-cv2.circle(color_img,tuple([int(new_x), int(new_y)]), 5, (0,255,0), -1)
+# color_img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+# cv2.circle(color_img,tuple([int(new_x), int(new_y)]), 5, (0,255,0), -1)
 
-cv2.namedWindow("Detected tags", cv2.WINDOW_NORMAL) 
-cv2.imshow("Detected tags", color_img)
+# cv2.namedWindow("Detected tags", cv2.WINDOW_NORMAL) 
+# cv2.imshow("Detected tags", color_img)
 
-# cv2.imshow("Detected tags", cv2.resize(color_img, (720, 960)))
-
-
-k = cv2.waitKey(0)
-cv2.destroyAllWindows()
-
-exit()
+# # cv2.imshow("Detected tags", cv2.resize(color_img, (720, 960)))
 
 
+# k = cv2.waitKey(0)
+# cv2.destroyAllWindows()
 
-VISUALIZATION = True
-RENDERING = False
+# exit()
+
+
+
+VISUALIZATION = False
+RENDERING = True
 
 if VISUALIZATION:
         # mesh = o3d.io.read_triangle_mesh(mesh_fullpath, True)
@@ -207,7 +207,7 @@ if VISUALIZATION:
         #mesh.transform(World2Cam)
         
         coordinate = mesh.create_coordinate_frame(size=1.0, origin=np.array([0., 0., 0.]))
-        r = R.from_euler('xyz', [0, 180, -90], degrees=True)
+        r = R.from_euler('xyz', [0, 180, -180], degrees=True)
         Additional_Rotation = r.as_matrix()
         additional_rotation = np.concatenate(
                             [np.concatenate([Additional_Rotation, np.array([[0], [0], [0]])], axis=1), np.array([[0, 0, 0, 1]])], axis=0)
@@ -235,7 +235,7 @@ if RENDERING:
     scene.add_triangles(mesh_in_scene)
 
 
-    r = R.from_euler('xyz', [0, 180, -90], degrees=True)
+    r = R.from_euler('xyz', [180, 0 , 90], degrees=True)
     Additional_Rotation = r.as_matrix()
     additional_rotation = np.concatenate(
                         [np.concatenate([Additional_Rotation, np.array([[0], [0], [0]])], axis=1), np.array([[0, 0, 0, 1]])], axis=0)

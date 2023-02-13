@@ -125,6 +125,14 @@ if __name__ == '__main__':
         fxfycxcy= [intrinsics[0, 0], intrinsics[1, 1], intrinsics[0, 2], intrinsics[1, 2]]
     
         # The real size of the tag is about 8.7 cm
+        tag_sizes = np.arange(0.05, 0.16, 0.01)
+        
+        for tag_size in tag_sizes:
+            tags = at_detector.detect(img, estimate_tag_pose=True, camera_params = fxfycxcy, tag_size=tag_size)
+            true_distances = []
+            for tag in tags:
+                print(tag.corners)
+                exit()
         tags = at_detector.detect(img, estimate_tag_pose=True, camera_params = fxfycxcy, tag_size=0.087)
 
         if len(tags) == 0:
@@ -168,7 +176,7 @@ if __name__ == '__main__':
 
 
                 axis_cube = np.float32([[-1,-1,0], [-1,1,0], [1,1,0], [1,-1,0],
-                    [-1,-1,-2],[-1,1,-2],[1,1,-2],[1,-1,-2] ]) * 0.5*0.087
+                    [-1,-1,-2],[-1,1,-2],[1,1,-2],[1,-1,-2] ]) * 0.5 * 0.087
 
 
                 imgpts_cube, _= cv2.projectPoints(axis_cube, R_tag2cam, t_tag2cam.reshape(-1), intrinsics, 0)
