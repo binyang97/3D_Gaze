@@ -62,7 +62,8 @@ def draw_cube(img, imgpts):
 if __name__ == '__main__':
     if platform == "linux" or platform == "linux2":  
     # linux
-        data_path  = "/home/biyang/Documents/3D_Gaze/dataset/3D_scanner_app/Test2"
+        data_path  = "/home/biyang/Documents/3D_Gaze/dataset/3D_scanner_app/Apriltag2-dataset2"
+        data_pi_path = "/home/biyang/Documents/3D_Gaze/dataset/PupilInvisible/office1/data_1"
     elif platform == "win32":
     # Windows...
         data_path = r"D:\Documents\Semester_Project\3D_Gaze\dataset\3D_Scanner_App\Apriltag1-dataset2"
@@ -118,7 +119,7 @@ if __name__ == '__main__':
         print("There is no extrinsic matrix and 3d model for data recorded by PI, so there is no 3d visualization, only visulization with tag pose")
 
     for i, image_file in enumerate(images_files):
-        # if i%10 != 0:
+        # if i%5 != 0:
         #     continue
         
 
@@ -178,19 +179,29 @@ if __name__ == '__main__':
             Evaluation[tag_id]["angle_y"].append(euler_angles[1])
             Evaluation[tag_id]["angle_z"].append(euler_angles[2])
 
-            tag_corner = np.array(tag_real.corners[0]) # 0: right bottom, 1: right top, 2: left top, 3: left bottom
-            tag_center = np.array(tag_real.center)
-            tag_corner_tag_coord = np.array([[1], [1], [0]]) * (real_tag_size/2)
-            tag_corner_cam_coord = R_tag2cam @ tag_corner_tag_coord + t_tag2cam
-            tag_center_cam_coord = t_tag2cam
+            alpha_real_tag_mean = 0
+            for i, tag_corner in enumerate(tag_real.corners):
+             # 0: right bottom, 1: right top, 2: left top, 3: left bottom
+                tag_center = np.array(tag_real.center)
+                if i == 0:
+                    tag_corner_tag_coord = np.array([[1], [1], [0]]) * (real_tag_size/2)
+                elif i == 1:
+                    tag_corner_tag_coord = np.array([[1], [-1], [0]]) * (real_tag_size/2)
+                elif i == 2:
+                    tag_corner_tag_coord = np.array([[-1], [-1], [0]]) * (real_tag_size/2)
+                elif i == 3:
+                    tag_corner_tag_coord = np.array([[-1], [1], [0]]) * (real_tag_size/2)
+                tag_corner_cam_coord = R_tag2cam @ tag_corner_tag_coord + t_tag2cam
+                tag_center_cam_coord = t_tag2cam
 
-            delta_l = math.sqrt(math.pow((tag_corner_cam_coord[0]*tag_center_cam_coord[2]/tag_corner_cam_coord[2] - tag_center_cam_coord[0]), 2) +
-                                math.pow((tag_corner_cam_coord[1]*tag_center_cam_coord[2]/tag_corner_cam_coord[2] - tag_center_cam_coord[1]), 2))
+                delta_l = math.sqrt(math.pow((tag_corner_cam_coord[0]*tag_center_cam_coord[2]/tag_corner_cam_coord[2] - tag_center_cam_coord[0]), 2) +
+                                    math.pow((tag_corner_cam_coord[1]*tag_center_cam_coord[2]/tag_corner_cam_coord[2] - tag_center_cam_coord[1]), 2))
 
-            
-            delta_d = math.sqrt(math.pow(focal_length, 2) + math.pow(np.linalg.norm(tag_center - principal_point), 2))
-            delta_uv_tag = np.linalg.norm(tag_corner-tag_center)
-            alpha_real.append((delta_l / real_tag_size) * (delta_d / delta_uv_tag))
+                
+                delta_d = math.sqrt(math.pow(focal_length, 2) + math.pow(np.linalg.norm(tag_center - principal_point), 2))
+                delta_uv_tag = np.linalg.norm(tag_corner-tag_center)
+                alpha_real_tag_mean += (delta_l / real_tag_size) * (delta_d / delta_uv_tag)
+            alpha_real.append(alpha_real_tag_mean / 4)
 
             
         
@@ -210,7 +221,7 @@ if __name__ == '__main__':
         print(true_distances.shape)
         for i, tag in enumerate(tags_real):
             alpha_test, _, err = linear_fit(tag_sizes, true_distances[:,i])
-            alpha_error = abs(alpha_real[i] - alpha_test) / alpha_real[i]
+            alpha_error = abs(alpha_real[i] - alpha_test)
             
 
 
@@ -219,7 +230,7 @@ if __name__ == '__main__':
             
         
 
-    with open(r"D:\Documents\Semester_Project\3D_Gaze\dataset\3D_Scanner_App\evaluation_apriltag_detection_Iphone.json", "w") as outfile:
+    with open("/home/biyang/Documents/3D_Gaze/dataset/PupilInvisible/evaluation_apriltag_detection_Iphone.json", "w") as outfile:
          json.dump(Evaluation, outfile, indent=4)
 
 
