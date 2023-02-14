@@ -11,6 +11,7 @@ from Apriltag_Colmap import create_geometry_at_points, visualize_2d
 from create_rgb_from_pcd import render_image
 import copy
 import matplotlib.pyplot as plt
+from imageio import imread, imwrite
 
 def to_arr(m):
     m = np.array(m)
@@ -32,7 +33,7 @@ if platform == "linux" or platform == "linux2":
     data_path  = "/home/biyang/Documents/3D_Gaze/dataset/3D_scanner_app/Apriltag1_dataset1"
 elif platform == "win32":
 # Windows...
-    data_path = r"D:\Documents\Semester_Project\3D_Gaze\dataset\3D_Scanner_App\Apriltag1_dataset1"
+    data_path = r"D:\Documents\Semester_Project\3D_Gaze\dataset\3D_Scanner_App\Apriltag2-d3"
 
 images_path = os.path.join(data_path, "frames")
 pose_path = os.path.join(data_path, "pose")
@@ -78,8 +79,9 @@ images_files = os.listdir(images_path)
 images_files.sort()
 
 #index = 82
-index = 113
-#index = 0
+#index = 113
+#index = 39
+index = 219
 
 image_file = images_files[index]
 
@@ -148,6 +150,46 @@ direction_normalized = -direction / np.linalg.norm(direction)
 
 
 
+#Test 2
+mesh_no_color = o3d.io.read_triangle_mesh(mesh_fullpath)
+points = []
+valid_points_3d = []
+
+r = R.from_euler('xyz', [0, 0, 90], degrees=True)
+Additional_Rotation = r.as_matrix()
+
+additional_rotation = np.concatenate(
+                [np.concatenate([Additional_Rotation, np.zeros((3,1))], axis=1), np.array([[0, 0, 0, 1]])], axis=0)
+for p3d in np.array(mesh_no_color.vertices)[::20]:
+    
+    mvp = np.dot(projectionMatrix, np.linalg.inv(Cam2World @ additional_rotation))
+    p3d_cam = np.append(p3d, [1])
+    p3d_cam =  np.linalg.inv(Cam2World @ additional_rotation) @ p3d_cam
+    pt2d = project_point_mvp(p3d, mvp, img_width, img_height)
+    
+    x,y = pt2d[:2]
+    
+    if x >= 0 and x < img_width and y >= 0 and y < img_height and p3d_cam[2] < 0:
+        points.append((x,y))
+        valid_points_3d.append(p3d)
+    
+points = np.array(points)
+points_3d = np.array(valid_points_3d)
+
+
+plt.figure(figsize=(12,12))
+
+plt.imshow(imread(os.path.join(images_path, image_file)))
+
+plt.plot( points[:,0], points[:,1] , '.', color='magenta', alpha=0.5)
+plt.show()
+
+highlight_points = o3d.geometry.PointCloud(o3d.utility.Vector3dVector(points_3d))
+highlight_points.paint_uniform_color([1, 0, 0])
+o3d.visualization.draw_geometries([mesh_no_color, highlight_points])
+
+exit()
+
 
 
 mesh =  o3d.io.read_triangle_mesh(mesh_fullpath, True)
@@ -175,7 +217,6 @@ depth = ans['t_hit'].numpy()[-1] # z-axis points to the
 target_point_3d = camera_origin_world + direction_normalized*depth
 
 
-
 # Test
 #target_point_3d = target_point_3d + np.array([0.1, 0, 0.6]).reshape(3, 1)
 # mvp = np.dot(projectionMatrix, np.linalg.inv(Cam2World))
@@ -198,8 +239,9 @@ target_point_3d = camera_origin_world + direction_normalized*depth
 
 
 
+
 VISUALIZATION = False
-RENDERING = True
+RENDERING = False
 
 if VISUALIZATION:
         # mesh = o3d.io.read_triangle_mesh(mesh_fullpath, True)
@@ -235,13 +277,13 @@ if RENDERING:
     scene.add_triangles(mesh_in_scene)
 
 
-    r = R.from_euler('xyz', [180, 0 , 90], degrees=True)
+    r = R.from_euler('xyz', [0, 0, 90], degrees=True)
     Additional_Rotation = r.as_matrix()
     additional_rotation = np.concatenate(
                         [np.concatenate([Additional_Rotation, np.array([[0], [0], [0]])], axis=1), np.array([[0, 0, 0, 1]])], axis=0)
 
     print(additional_rotation)
-    extrinsic = np.linalg.inv(additional_rotation) @ World2Cam
+    extrinsic = np.linalg.inv(Cam2World @ additional_rotation)
     # Rays are 6D vectors with origin and ray direction.
     # Here we use a helper function to create rays for a pinhole camera.
     rays = scene.create_rays_pinhole(intrinsic_matrix = intrinsics,
@@ -250,18 +292,23 @@ if RENDERING:
                                     height_px=img_height)
 
     # Compute the ray intersections.
+
+    # rays_inverse = rays.numpy()
+    # rays_inverse[:, :, 3:] = -rays_inverse[:, :, 3:]
+
     ans = scene.cast_rays(rays)
 
     #print(ans['t_hit'])
 
     titles = ['Original Image','Rendered Depth Image', 'Pre-recorded Depth Image']
                 # 'Original Image (grayscale)','Image after removing the noise (grayscale)']
+    depth_true = cv2.rotate(depth_true, cv2.ROTATE_90_CLOCKWISE)
     depth_resized = cv2.resize(depth_true, (1440, 1920), interpolation = cv2.INTER_AREA)
+    
     
     images = [img, ans['t_hit'].numpy(), depth_resized]
     plt.figure(figsize=(13,5))
     for i in range(len(images)):
-        print(i)
         plt.subplot(1,3,i+1)
         plt.imshow(images[i])
         plt.title(titles[i])

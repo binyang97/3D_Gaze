@@ -44,7 +44,7 @@ if __name__ == '__main__':
         data_path  = "/home/biyang/Documents/3D_Gaze/dataset/3D_scanner_app/Test2"
     elif platform == "win32":
     # Windows...
-        data_path = r"D:\Documents\Semester_Project\3D_Gaze\dataset\3D_Scanner_App\Apriltag1-dataset2"
+        data_path = r"D:\Documents\Semester_Project\3D_Gaze\dataset\3D_Scanner_App\Apriltag2-dataset2"
         data_pi_path = r"D:\Documents\Semester_Project\3D_Gaze\dataset\PupilInvisible\office1\data_1"
 
     # Getting the Visualization
@@ -98,7 +98,7 @@ if __name__ == '__main__':
         print("There is no extrinsic matrix and 3d model for data recorded by PI, so there is no 3d visualization, only visulization with tag pose")
 
     for i, image_file in enumerate(images_files):
-        if i%10 != 0:
+        if i != 94:
             continue
         
 
