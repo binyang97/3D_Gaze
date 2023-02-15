@@ -28,9 +28,22 @@ def project_point_mvp(p_in, mvp, image_width, image_height):
     py = (1.0 - (0.5 + (pos_y) * 0.5)) * image_height
     return px, py
 
+def project_point_3d(p2d, mvp_inv, image_width, image_height):
+    px = p2d[0]
+    py = p2d[1]
+
+    pos_x = ((px/image_width) -0.5) * 2
+    pos_y = (0.5-(py/image_height)) *2
+
+    e0 = np.array([[pos_x], [pos_y], [1], [1]])
+
+    p0 = np.dot(mvp_inv, e0)
+
+    return p0
+
 if platform == "linux" or platform == "linux2":  
     # linux
-    data_path  = "/home/biyang/Documents/3D_Gaze/dataset/3D_scanner_app/Apriltag1_dataset1"
+    data_path  = "/home/biyang/Documents/3D_Gaze/dataset/3D_scanner_app/Apriltag2-d3"
 elif platform == "win32":
 # Windows...
     data_path = r"D:\Documents\Semester_Project\3D_Gaze\dataset\3D_Scanner_App\Apriltag2-d3"
@@ -54,7 +67,6 @@ MatrixToWorldMap = np.array([[MW["m11"], MW["m12"], MW["m13"], MW["m14"]],
                     [MW["m21"], MW["m22"], MW["m23"], MW["m24"]],
                     [MW["m31"], MW["m32"], MW["m33"], MW["m34"]],
                     [MW["m41"], MW["m42"], MW["m43"], MW["m44"]]]).T
-print(MatrixToWorldMap)
 
 # mesh =  o3d.io.read_triangle_mesh(mesh_fullpath, True)
 # mesh.transform(MatrixToWorldMap)
@@ -124,7 +136,7 @@ K_inv = np.linalg.inv(intrinsics)
 
 project_point_cam = K_inv @ uv
 project_point_cam = np.concatenate((project_point_cam, np.ones((1,1))), axis = 0)
-project_point_world = Cam2World @ project_point_cam
+project_point_world = Cam2World  @ project_point_cam
 
 
 project_point_world = project_point_world[:3]
@@ -151,49 +163,56 @@ direction_normalized = -direction / np.linalg.norm(direction)
 
 
 #Test 2
-mesh_no_color = o3d.io.read_triangle_mesh(mesh_fullpath)
-points = []
-valid_points_3d = []
+# mesh_no_color = o3d.io.read_triangle_mesh(mesh_fullpath)
+# points = []
+# valid_points_3d = []
 
-r = R.from_euler('xyz', [0, 0, 90], degrees=True)
-Additional_Rotation = r.as_matrix()
+# r = R.from_euler('xyz', [0, 0, 90], degrees=True)
+# Additional_Rotation = r.as_matrix()
 
-additional_rotation = np.concatenate(
-                [np.concatenate([Additional_Rotation, np.zeros((3,1))], axis=1), np.array([[0, 0, 0, 1]])], axis=0)
-for p3d in np.array(mesh_no_color.vertices)[::20]:
+# additional_rotation = np.concatenate(
+#                 [np.concatenate([Additional_Rotation, np.zeros((3,1))], axis=1), np.array([[0, 0, 0, 1]])], axis=0)
+# for p3d in np.array(mesh_no_color.vertices)[::20]:
     
-    mvp = np.dot(projectionMatrix, np.linalg.inv(Cam2World @ additional_rotation))
-    p3d_cam = np.append(p3d, [1])
-    p3d_cam =  np.linalg.inv(Cam2World @ additional_rotation) @ p3d_cam
-    pt2d = project_point_mvp(p3d, mvp, img_width, img_height)
+#     mvp = np.dot(projectionMatrix, np.linalg.inv(Cam2World @ additional_rotation))
+#     p3d_cam = np.append(p3d, [1])
+#     p3d_cam =  np.linalg.inv(Cam2World @ additional_rotation) @ p3d_cam
+#     pt2d = project_point_mvp(p3d, mvp, img_width, img_height)
     
-    x,y = pt2d[:2]
+#     x,y = pt2d[:2]
     
-    if x >= 0 and x < img_width and y >= 0 and y < img_height and p3d_cam[2] < 0:
-        points.append((x,y))
-        valid_points_3d.append(p3d)
+#     if x >= 0 and x < img_width and y >= 0 and y < img_height and p3d_cam[2] < 0:
+#         points.append((x,y))
+#         valid_points_3d.append(p3d)
     
-points = np.array(points)
-points_3d = np.array(valid_points_3d)
+# points = np.array(points)
+# points_3d = np.array(valid_points_3d)
 
 
-plt.figure(figsize=(12,12))
+# plt.figure(figsize=(12,12))
 
-plt.imshow(imread(os.path.join(images_path, image_file)))
+# plt.imshow(imread(os.path.join(images_path, image_file)))
 
-plt.plot( points[:,0], points[:,1] , '.', color='magenta', alpha=0.5)
-plt.show()
+# plt.plot( points[:,0], points[:,1] , '.', color='magenta', alpha=0.5)
+# plt.show()
 
-highlight_points = o3d.geometry.PointCloud(o3d.utility.Vector3dVector(points_3d))
-highlight_points.paint_uniform_color([1, 0, 0])
-o3d.visualization.draw_geometries([mesh_no_color, highlight_points])
+# highlight_points = o3d.geometry.PointCloud(o3d.utility.Vector3dVector(points_3d))
+# highlight_points.paint_uniform_color([1, 0, 0])
+# o3d.visualization.draw_geometries([mesh_no_color, highlight_points])
 
-exit()
+# exit()
 
 
 
 mesh =  o3d.io.read_triangle_mesh(mesh_fullpath, True)
-#mesh.transform(MatrixToWorldMap)
+
+# r = R.from_euler('xyz', [0, 180, -90], degrees=True)
+# Additional_Rotation = r.as_matrix()
+# additional_rotation = np.concatenate(
+#                     [np.concatenate([Additional_Rotation, np.array([[0], [0], [0]])], axis=1), np.array([[0, 0, 0, 1]])], axis=0)
+
+# mesh.transform(additional_rotation)
+
 mesh_in_scene = copy.deepcopy(mesh)
 mesh_in_scene = o3d.t.geometry.TriangleMesh.from_legacy(mesh_in_scene)
 # Create scene and add the cube mesh
@@ -217,30 +236,31 @@ depth = ans['t_hit'].numpy()[-1] # z-axis points to the
 target_point_3d = camera_origin_world + direction_normalized*depth
 
 
+
 # Test
-#target_point_3d = target_point_3d + np.array([0.1, 0, 0.6]).reshape(3, 1)
-# mvp = np.dot(projectionMatrix, np.linalg.inv(Cam2World))
-# new_x, new_y = project_point_mvp(target_point_3d, mvp, img_width, img_height)
+target_point_3d = target_point_3d + np.array([0.1, 0.1, -1]).reshape(3, 1)
+r = R.from_euler('xyz', [0, 0, 90], degrees=True)
+Additional_Rotation = r.as_matrix()
 
+additional_rotation = np.concatenate(
+                [np.concatenate([Additional_Rotation, np.zeros((3,1))], axis=1), np.array([[0, 0, 0, 1]])], axis=0)
+mvp = np.dot(projectionMatrix, np.linalg.inv(Cam2World @ additional_rotation))
+new_x, new_y = project_point_mvp(target_point_3d, mvp, img_width, img_height)
+plt.figure(figsize=(12,12))
 
-# color_img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
-# cv2.circle(color_img,tuple([int(new_x), int(new_y)]), 5, (0,255,0), -1)
+plt.imshow(imread(os.path.join(images_path, image_file)))
 
-# cv2.namedWindow("Detected tags", cv2.WINDOW_NORMAL) 
-# cv2.imshow("Detected tags", color_img)
-
-# # cv2.imshow("Detected tags", cv2.resize(color_img, (720, 960)))
-
-
-# k = cv2.waitKey(0)
-# cv2.destroyAllWindows()
-
-# exit()
+plt.plot( new_x, new_y, '.', color='magenta', alpha=0.5)
+plt.show()
 
 
 
+exit()
 
-VISUALIZATION = False
+
+
+
+VISUALIZATION = True
 RENDERING = False
 
 if VISUALIZATION:
@@ -249,19 +269,18 @@ if VISUALIZATION:
         #mesh.transform(World2Cam)
         
         coordinate = mesh.create_coordinate_frame(size=1.0, origin=np.array([0., 0., 0.]))
-        r = R.from_euler('xyz', [0, 180, -180], degrees=True)
-        Additional_Rotation = r.as_matrix()
-        additional_rotation = np.concatenate(
-                            [np.concatenate([Additional_Rotation, np.array([[0], [0], [0]])], axis=1), np.array([[0, 0, 0, 1]])], axis=0)
+       
 
 
-       # coordinate_2 = copy.deepcopy(coordinate)
-       # coordinate_2.transform(additional_rotation)
+        # coordinate_2 = copy.deepcopy(coordinate)
+
+        # coordinate.transform(Cam2World)
+        # coordinate_2.transform(Cam2World @ additional_rotation)
         #user_obb_points_3d = create_geometry_at_points(points_user_obb, color = [1, 0, 0], radius = 0.05)
         #o3d.visualization.draw_geometries([mesh, coordinate, user_obb_points_3d])
         
 
-        tag_points = create_geometry_at_points([target_point_3d, camera_origin_world], color = [1, 0, 0], radius=0.05)
+        tag_points = create_geometry_at_points([target_point_3d, camera_origin_world], color = [1, 0, 0], radius=0.02)
         #tag_points = create_geometry_at_points([target_point_3d, np.zeros((3,1)), project_point_cam[:3]], color = [1, 0, 0], radius=0.1)
 
 
