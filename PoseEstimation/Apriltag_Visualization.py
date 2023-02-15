@@ -48,8 +48,8 @@ if __name__ == '__main__':
         data_pi_path = r"D:\Documents\Semester_Project\3D_Gaze\dataset\PupilInvisible\office1\data_1"
 
     # Getting the Visualization
-    VISUALIZATION = False
-    TAG_POSE_VISUALIZATION = True
+    VISUALIZATION = True
+    TAG_POSE_VISUALIZATION = False
     DATA = "IPHONE" # "PI" or "IPHONE"
 
     at_detector = Detector(
@@ -80,7 +80,7 @@ if __name__ == '__main__':
 
     tag_points_3d = []
 
-    r = R.from_euler('xyz', [0, 180, -90], degrees=True)
+    r = R.from_euler('xyz', [0, 180, 0], degrees=True)
     Additional_Rotation = r.as_matrix()
 
     additional_rotation = np.concatenate(
@@ -98,7 +98,7 @@ if __name__ == '__main__':
         print("There is no extrinsic matrix and 3d model for data recorded by PI, so there is no 3d visualization, only visulization with tag pose")
 
     for i, image_file in enumerate(images_files):
-        if i != 94:
+        if i % 10 != 0:
             continue
         
 
@@ -134,7 +134,7 @@ if __name__ == '__main__':
 
         if DATA == "IPHONE":
             ext = np.array(camera_param["cameraPoseARFrame"]).reshape(4, 4)      
-            Cam2World = ext @ additional_rotation
+            Cam2World = ext #@ additional_rotation
 
         if DATA == "PI":
             Cam2World = np.eye(4)
@@ -142,14 +142,16 @@ if __name__ == '__main__':
 
         for tag in tags:
             tag_position_cam = np.concatenate((np.array(tag.pose_t), np.ones((1, 1))), axis = 0 )
-            #tag_position_cam2 = -np.array(tag.pose_R).T @ np.array(tag.pose_t)
+            print(tag_position_cam)
+
+            tag_position_cam = additional_rotation @ tag_position_cam
             tag_position_world = Cam2World@tag_position_cam
             
             tag_points_3d.append(tag_position_world[:3])
 
             tag_center = np.concatenate((np.array(tag.center), np.ones(2))).reshape(4, 1)
-            tag_center[0] = tag_center[0]/img_height
-            tag_center[1] = tag_center[1]/img_width
+            #tag_center[0] = tag_center[0]/img_height
+            #tag_center[1] = tag_center[1]/img_width
 
 
             # Visualize the axis and cube on the tags
@@ -225,7 +227,7 @@ if __name__ == '__main__':
     if VISUALIZATION:
         mesh = o3d.io.read_triangle_mesh(mesh_fullpath, True)
         #
-        mesh.transform(np.linalg.inv(Cam2World))
+        #mesh.transform(np.linalg.inv(Cam2World))
         
         coordinate = mesh.create_coordinate_frame(size=1.0, origin=np.array([0., 0., 0.]))
         

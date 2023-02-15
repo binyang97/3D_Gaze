@@ -66,7 +66,7 @@ if __name__ == '__main__':
         data_pi_path = "/home/biyang/Documents/3D_Gaze/dataset/PupilInvisible/office1/data_1"
     elif platform == "win32":
     # Windows...
-        data_path = r"D:\Documents\Semester_Project\3D_Gaze\dataset\3D_Scanner_App\Apriltag1-dataset2"
+        data_path = r"D:\Documents\Semester_Project\3D_Gaze\dataset\3D_Scanner_App\Apriltag1_dataset1"
         data_pi_path = r"D:\Documents\Semester_Project\3D_Gaze\dataset\PupilInvisible\office1\data_1"
 
     # Getting the Visualization
@@ -230,7 +230,7 @@ if __name__ == '__main__':
             
         
 
-    with open("/home/biyang/Documents/3D_Gaze/dataset/PupilInvisible/evaluation_apriltag_detection_Iphone.json", "w") as outfile:
+    with open(r"D:\Documents\Semester_Project\3D_Gaze\dataset\evaluation_apriltag_detection_Iphone.json", "w") as outfile:
          json.dump(Evaluation, outfile, indent=4)
 
 

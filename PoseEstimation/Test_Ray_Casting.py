@@ -92,8 +92,8 @@ images_files.sort()
 
 #index = 82
 #index = 113
-#index = 39
-index = 219
+index = 39
+#index = 219
 
 image_file = images_files[index]
 
@@ -129,14 +129,16 @@ World2Cam = np.concatenate(
 
 
 tag_center = np.array(tag.center).reshape(2,1)
+# tag_center[0] = 2*(tag_center[0] - 0.5 * img_width)
+# tag_center[1] = 2*(-tag_center[1] + 0.5 * img_height)
 
 uv = np.concatenate((tag_center, np.ones((1,1))), axis = 0)
 
 K_inv = np.linalg.inv(intrinsics)
-
+                 
 project_point_cam = K_inv @ uv
 project_point_cam = np.concatenate((project_point_cam, np.ones((1,1))), axis = 0)
-project_point_world = Cam2World  @ project_point_cam
+project_point_world = Cam2World @ project_point_cam
 
 
 project_point_world = project_point_world[:3]
@@ -238,30 +240,30 @@ target_point_3d = camera_origin_world + direction_normalized*depth
 
 
 # Test
-target_point_3d = target_point_3d + np.array([0.1, 0.1, -1]).reshape(3, 1)
-r = R.from_euler('xyz', [0, 0, 90], degrees=True)
-Additional_Rotation = r.as_matrix()
+# target_point_3d = target_point_3d + np.array([0.1, 0.1, -1]).reshape(3, 1)
+# r = R.from_euler('xyz', [0, 0, 90], degrees=True)
+# Additional_Rotation = r.as_matrix()
 
-additional_rotation = np.concatenate(
-                [np.concatenate([Additional_Rotation, np.zeros((3,1))], axis=1), np.array([[0, 0, 0, 1]])], axis=0)
-mvp = np.dot(projectionMatrix, np.linalg.inv(Cam2World @ additional_rotation))
-new_x, new_y = project_point_mvp(target_point_3d, mvp, img_width, img_height)
-plt.figure(figsize=(12,12))
+# additional_rotation = np.concatenate(
+#                 [np.concatenate([Additional_Rotation, np.zeros((3,1))], axis=1), np.array([[0, 0, 0, 1]])], axis=0)
+# mvp = np.dot(projectionMatrix, np.linalg.inv(Cam2World @ additional_rotation))
+# new_x, new_y = project_point_mvp(target_point_3d, mvp, img_width, img_height)
+# plt.figure(figsize=(12,12))
 
-plt.imshow(imread(os.path.join(images_path, image_file)))
+# plt.imshow(imread(os.path.join(images_path, image_file)))
 
-plt.plot( new_x, new_y, '.', color='magenta', alpha=0.5)
-plt.show()
-
-
-
-exit()
+# plt.plot( new_x, new_y, '.', color='magenta', alpha=0.5)
+# plt.show()
 
 
 
+# exit()
 
-VISUALIZATION = True
-RENDERING = False
+
+
+
+VISUALIZATION = False
+RENDERING = True
 
 if VISUALIZATION:
         # mesh = o3d.io.read_triangle_mesh(mesh_fullpath, True)
@@ -296,13 +298,16 @@ if RENDERING:
     scene.add_triangles(mesh_in_scene)
 
 
-    r = R.from_euler('xyz', [0, 0, 90], degrees=True)
+    r = R.from_euler('xyz', [0, 0, 0], degrees=True)
     Additional_Rotation = r.as_matrix()
     additional_rotation = np.concatenate(
                         [np.concatenate([Additional_Rotation, np.array([[0], [0], [0]])], axis=1), np.array([[0, 0, 0, 1]])], axis=0)
 
     print(additional_rotation)
-    extrinsic = np.linalg.inv(Cam2World @ additional_rotation)
+
+    reflection_xy = np.eye(4)
+    reflection_xy[2, 2] = -1
+    extrinsic = np.linalg.inv(Cam2World @ additional_rotation @ reflection_xy)
     # Rays are 6D vectors with origin and ray direction.
     # Here we use a helper function to create rays for a pinhole camera.
     rays = scene.create_rays_pinhole(intrinsic_matrix = intrinsics,
@@ -312,8 +317,11 @@ if RENDERING:
 
     # Compute the ray intersections.
 
-    # rays_inverse = rays.numpy()
-    # rays_inverse[:, :, 3:] = -rays_inverse[:, :, 3:]
+    rays_inverse = rays.numpy()
+
+    #rays_inverse[:, :, -1] = -rays_inverse[:, :, -1]
+
+    rays = o3d.core.Tensor(rays_inverse, dtype=o3d.core.Dtype.Float32)
 
     ans = scene.cast_rays(rays)
 
