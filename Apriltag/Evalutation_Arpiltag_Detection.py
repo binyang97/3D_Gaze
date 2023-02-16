@@ -10,8 +10,6 @@ import open3d as o3d
 from glob import glob
 import numpy as np
 from scipy.spatial.transform import Rotation as R
-from Apriltag_Colmap import create_geometry_at_points, visualize_2d, colorbar
-from matplotlib import pyplot as plt
 import math
 
 
@@ -62,7 +60,7 @@ def draw_cube(img, imgpts):
 if __name__ == '__main__':
     if platform == "linux" or platform == "linux2":  
     # linux
-        data_path  = "/home/biyang/Documents/3D_Gaze/dataset/3D_scanner_app/Apriltag2-dataset2"
+        data_path  = "/home/biyang/Documents/3D_Gaze/dataset/3D_scanner_app/Apriltag1_dataset1"
         data_pi_path = "/home/biyang/Documents/3D_Gaze/dataset/PupilInvisible/office1/data_1"
     elif platform == "win32":
     # Windows...
@@ -230,7 +228,7 @@ if __name__ == '__main__':
             
         
 
-    with open(r"D:\Documents\Semester_Project\3D_Gaze\dataset\evaluation_apriltag_detection_Iphone.json", "w") as outfile:
+    with open(r"/home/biyang/Documents/3D_Gaze/dataset/PupilInvisible/evaluation_apriltag_detection_Iphone.json", "w") as outfile:
          json.dump(Evaluation, outfile, indent=4)
 
 

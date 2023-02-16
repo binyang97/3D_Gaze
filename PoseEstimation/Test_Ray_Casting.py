@@ -28,18 +28,29 @@ def project_point_mvp(p_in, mvp, image_width, image_height):
     py = (1.0 - (0.5 + (pos_y) * 0.5)) * image_height
     return px, py
 
-def project_point_3d(p2d, mvp_inv, image_width, image_height):
-    px = p2d[0]
-    py = p2d[1]
+def Unproject(points, Z, intrinsic):
+  f_x = intrinsic[0, 0]
+  f_y = intrinsic[1, 1]
+  c_x = intrinsic[0, 2]
+  c_y = intrinsic[1, 2]
+  # This was an error before
+  # c_x = intrinsic[0, 3]
+  # c_y = intrinsic[1, 3]
 
-    pos_x = ((px/image_width) -0.5) * 2
-    pos_y = (0.5-(py/image_height)) *2
+  # Step 1. Undistort.
+#   points_undistorted = np.array([])
+#   if len(points) > 0:
+#     points_undistorted = cv2.undistortPoints(np.expand_dims(points, axis=1), intrinsic, distortion, P=intrinsic)
+#   points_undistorted = np.squeeze(points_undistorted, axis=1)
 
-    e0 = np.array([[pos_x], [pos_y], [1], [1]])
-
-    p0 = np.dot(mvp_inv, e0)
-
-    return p0
+  # Step 2. Reproject.
+  result = []
+  for idx in range(len(points)):
+    z = Z[0] if len(Z) == 1 else Z[idx]
+    x = (points[idx][0] - c_x) / f_x * z
+    y = (points[idx][1] - c_y) / f_y * z
+    result.append([x, y, z])
+  return result
 
 if platform == "linux" or platform == "linux2":  
     # linux
@@ -106,21 +117,50 @@ depth_true = cv2.imread(os.path.join(depth_path, depth_file), cv2.IMREAD_GRAYSCA
 conf = cv2.imread(os.path.join(conf_path, conf_file), cv2.IMREAD_GRAYSCALE)
 
 img_height, img_width = img.shape
-
-tags = at_detector.detect(img)
-
-tag = tags[0]
-
 with open(os.path.join(pose_path, camera_param_file), 'r') as f:
             camera_param = json.load(f)
 
 intrinsics = np.array(camera_param["intrinsics"]).reshape(3, 3)
-
 projectionMatrix = to_arr(camera_param["projectionMatrix"])
-print(projectionMatrix)
-
-
 Cam2World = np.array(camera_param["cameraPoseARFrame"]).reshape(4, 4)
+
+fxfycxcy= [intrinsics[0, 0], intrinsics[1, 1], intrinsics[0, 2], intrinsics[1, 2]]
+    
+# The real size of the tag is about 8.7 cm
+tags = at_detector.detect(img, estimate_tag_pose=True, camera_params = fxfycxcy, tag_size=0.087)
+
+tag = tags[0]
+
+# Test 3                                                                                                                                                    
+# distance_tag2cam = np.linalg.norm(np.array(tag.pose_t))
+
+
+# project_3d_point = Unproject([tag.center], [distance_tag2cam], intrinsics)
+# print(project_3d_point)
+
+# r = R.from_euler('xyz', [0, 180, -90], degrees=True)
+# Additional_Rotation = r.as_matrix()
+# additional_rotation = np.concatenate(
+#                     [np.concatenate([Additional_Rotation, np.array([[0], [0], [0]])], axis=1), np.array([[0, 0, 0, 1]])], axis=0)
+
+# project_3d_point = np.array(project_3d_point)[-1].reshape(3, 1)
+# project_point_cam = np.concatenate((project_3d_point, np.ones((1,1))), axis = 0)
+# project_point_world = (Cam2World @additional_rotation) @ project_point_cam
+# target_point_3d = project_point_world[:3]
+
+# target_point_3d_cam = project_3d_point
+# target_point_3d_cam = -target_point_3d_cam
+
+# mesh =  o3d.io.read_triangle_mesh(mesh_fullpath, True)
+# mesh.transform(np.linalg.inv(Cam2World))
+# tag_points = create_geometry_at_points([target_point_3d_cam], color = [1, 0, 0], radius=0.05)
+#         #tag_points = create_geometry_at_points([target_point_3d, np.zeros((3,1)), project_point_cam[:3]], color = [1, 0, 0], radius=0.1)
+
+
+# o3d.visualization.draw_geometries([mesh, tag_points])
+
+# exit()
+
 
 R_world2cam = Cam2World[:3, :3].T
 t_world2cam = - R_world2cam @ Cam2World[:3, 3].reshape(3, 1)

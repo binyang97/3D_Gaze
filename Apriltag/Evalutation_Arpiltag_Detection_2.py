@@ -7,7 +7,6 @@ import open3d as o3d
 from glob import glob
 import numpy as np
 from scipy.spatial.transform import Rotation as R
-from Apriltag_Colmap import create_geometry_at_points, visualize_2d, colorbar
 from matplotlib import pyplot as plt
 import math
 

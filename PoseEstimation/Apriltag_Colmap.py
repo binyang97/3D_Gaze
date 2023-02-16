@@ -223,8 +223,8 @@ if __name__ == '__main__':
 
     if platform == "linux" or platform == "linux2":  
     # linux
-        dataset_path = r"/home/biyang/Documents/3D_Gaze/Colmap/PI_room1/Test_image100_undistorted_chessboard/images_undistorted_chessboard"
-        database_path = r"/home/biyang/Documents/3D_Gaze/Colmap/PI_room1/Test_image100_undistorted_chessboard/"
+        dataset_path = r"/home/biyang/Documents/3D_Gaze/dataset/PupilInvisible/office1/data_1/images_undistorted_reduced"
+        database_path = r"/home/biyang/Documents/3D_Gaze/dataset/PupilInvisible/office1/data_1/colmap_reconstruction"
 
     elif platform == "win32":
     # Windows...
