@@ -75,7 +75,7 @@ def visualize_2d(img_grayscale, tags):
                 color=(0, 0, 255),
             )
 
-    cv2.namedWindow("Detected tags", cv2.WINDOW_NORMAL) 
+    #cv2.namedWindow("Detected tags", cv2.WINDOW_NORMAL) 
     cv2.imshow("Detected tags", color_img)
 
     k = cv2.waitKey(0)
@@ -120,7 +120,7 @@ def get_mask(img_grayscale, tags, visualization = True):
 
         vis = np.concatenate((img_grayscale, mask_vis), axis = 1)
 
-        cv2.namedWindow("output", cv2.WINDOW_NORMAL)
+        #cv2.namedWindow("output", cv2.WINDOW_NORMAL)
 
         cv2.imshow('output', vis)
 
@@ -228,7 +228,7 @@ if __name__ == '__main__':
 
     elif platform == "win32":
     # Windows...
-        dataset_path = r"D:\Documents\Semester_Project\3D_Gaze\dataset\PupilInvisible\room1\image100\images_undistorted_prerecorded"
+        dataset_path = r"D:\Documents\Semester_Project\3D_Gaze\dataset\PupilInvisible\office1\data_1\images_undistorted"
         database_path = r"D:\Documents\Semester_Project\3D_Gaze\dataset\PupilInvisible\room1\image_100_undistorted_prerecorded\Stereo_Fusion.min_num_pixels=10"
 
     VISUALIZATION_MASK = False
@@ -253,8 +253,11 @@ if __name__ == '__main__':
 
     # test
     if TEST:
-        test_frame = images[15]
-        img_fullpath = os.path.join(dataset_path, test_frame.name)
+        #test_frame = images[676]
+        test_frames = os.listdir(dataset_path)
+        test_frames.sort()
+        test_frame = test_frames[689]
+        img_fullpath = os.path.join(dataset_path, test_frame)
         img = cv2.imread(img_fullpath, cv2.IMREAD_GRAYSCALE)
         tags = at_detector.detect(img)
         visualize_2d(img, tags)
