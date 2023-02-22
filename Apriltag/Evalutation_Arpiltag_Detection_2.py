@@ -13,7 +13,7 @@ import math
 if __name__ == '__main__':
     if platform == "linux" or platform == "linux2":  
         # linux
-        json_path = "/home/biyang/Documents/3D_Gaze/dataset/PupilInvisible/evaluation_apriltag_detection_PI.json"
+        json_path = "/home/biyang/Documents/3D_Gaze/dataset/PupilInvisible/evaluation_apriltag_detection_Iphone.json"
     elif platform == "win32":
     # Windows...
         json_path = r""
@@ -27,7 +27,7 @@ if __name__ == '__main__':
 
 
         X = evaluation[tag_id]["Frame_id"]
-        X = [id[0:6] for id in X]
+        X = [id[6:11] for id in X]
         
 
         fig=plt.figure()
