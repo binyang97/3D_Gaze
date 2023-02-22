@@ -7,7 +7,7 @@ from glob import glob
 import copy
 from scipy.spatial.transform import Rotation as R
 import json
-from evaluate import *
+from PoseEstimation.evaluate import *
 
 
 # The file is substituted  with mesh_alignment.py
@@ -293,13 +293,17 @@ if __name__ == "__main__":
 
     mesh_reconstruction = o3d.io.read_triangle_mesh(path_reconstruction[-1])
     mesh_gt = o3d.io.read_triangle_mesh(path_gt[-1])
+
+    # o3d.visualization.draw_geometries([mesh_reconstruction, mesh_gt])
+    # exit()
+
     num_points = 500000
 
     # Load the ground truth transformation
     with open(path_gt_transformation, 'r') as fp:
         gt_transformation = json.load(fp)
 
-
+#0.4584061866053055
 
     Aligner = MeshAlignment(mesh_reconstruction, mesh_gt, num_points, scale_factor = 0.4584061866053055, voxel_size=0.05, icp_method="standard")
 
@@ -325,6 +329,6 @@ if __name__ == "__main__":
                     [np.concatenate([Aligner.result_icp.transformation[:3, :3], tran_new], axis=1), np.array([[0, 0, 0, 1]])], axis=0)
 
     mesh_reconstruction.scale(gt_transformation['scale'], center = np.zeros(3))
-    Aligner.draw_registration_result(mesh_reconstruction, mesh_gt, est_new, colored=False, inverse=True)
+    Aligner.draw_registration_result(mesh_reconstruction, mesh_gt, est_new, colored=True, inverse=False)
 
     

@@ -10,7 +10,7 @@ import open3d as o3d
 import copy
 import json
 
-from Colmap_Reader import ColmapReader
+from PoseEstimation.Colmap_Reader import ColmapReader
 
 Mask = collections.namedtuple(
     "Mask", ["tag_id", "tag_corners", "tag_center", "pixels_inside_tag", "mask"])
