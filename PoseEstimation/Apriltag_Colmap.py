@@ -143,7 +143,11 @@ def get_corresponding_3d_points_ids(masks, keypoints_2d, keypoints_3d_ids):
             if len(index) > 0:
                 found_indices.extend(list(index))
                 found_pixels.extend([valid_pixel] * len(index))
+
         found_indices = np.array(found_indices)
+        if len(found_indices) == 0:
+            continue
+        
         valid_indices_3d_points.append(keypoints_3d_ids[found_indices])
         valid_indices_2d_pixels.append(found_pixels)
 

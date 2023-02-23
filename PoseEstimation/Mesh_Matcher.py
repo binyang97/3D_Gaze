@@ -7,7 +7,7 @@ from glob import glob
 import copy
 from scipy.spatial.transform import Rotation as R
 import json
-from PoseEstimation.evaluate import *
+#from PoseEstimation.evaluate import *
 
 
 # The file is substituted  with mesh_alignment.py
@@ -15,7 +15,7 @@ from PoseEstimation.evaluate import *
    The pipeline is mainly based on the built-in functions of open3d'''
 
 class MeshAlignment:
-    def __init__(self, source, target, num_points, scale_factor, voxel_size = 0.05, icp_method = "standard", scaling = False, normalization = True, filtering = False):
+    def __init__(self, source, target, num_points, scale_factor, voxel_size = 0.05, icp_method = "standard", PCD = False, scaling = False, normalization = True, filtering = False):
         self.source_mesh = source
         self.target_mesh = target
         self.voxel_size = voxel_size
@@ -36,6 +36,8 @@ class MeshAlignment:
         self.icp_method = icp_method
 
         self.scale_factor = scale_factor
+
+        self.PCD = PCD
 
 
 
@@ -109,8 +111,8 @@ class MeshAlignment:
     @staticmethod
     def filter_points(pcd):
         print("Statistical oulier removal")
-        cl, ind = pcd.remove_statistical_outlier(nb_neighbors=30,
-                                                            std_ratio=0.2)
+        cl, ind = pcd.remove_statistical_outlier(nb_neighbors=10,
+                                                            std_ratio=0.5)
         return cl
 
     '''This function is actually not used'''
@@ -237,9 +239,15 @@ class MeshAlignment:
 
 
     def prepare_dataset(self):
-        print(":: Sample point clouds from two meshes")
-        self.source = self.sample_pc(self.source_mesh, self.num_points)
-        self.target = self.sample_pc(self.target_mesh, self.num_points)
+        if not self.PCD:
+            print(":: Sample point clouds from two meshes")
+            self.source = self.sample_pc(self.source_mesh, self.num_points)
+            self.target = self.sample_pc(self.target_mesh, self.num_points)
+
+        else:
+            self.source = copy.deepcopy(self.source_mesh)
+            self.target = copy.deepcopy(self.target_mesh)
+
 
         if self.filtering:
             print("Statistical oulier removal")
@@ -285,27 +293,40 @@ if __name__ == "__main__":
 
     elif platform == "win32":
     # Windows...
-        path_gt = glob('D:/Documents/Semester_Project/Colmap_Test/' + ARKitSceneDataID + '/GT/*.ply')
-        path_reconstruction = glob('D:/Documents/Semester_Project/Colmap_Test/' + ARKitSceneDataID + '/Output/meshed-poisson.ply')
+        # path_gt = glob('D:/Documents/Semester_Project/Colmap_Test/' + ARKitSceneDataID + '/GT/*.ply')
+        # path_reconstruction = glob('D:/Documents/Semester_Project/Colmap_Test/' + ARKitSceneDataID + '/Output/meshed-poisson.ply')
+
+        path_gt = r"D:\Documents\Semester_Project\3D_Gaze\dataset\3D_Scanner_App\Apriltag1-dataset2\data3d\export.obj"
+        path_reconstruction = r"D:\Documents\Semester_Project\3D_Gaze\dataset\PupilInvisible\office1\data_1\colmap\dense\fused.ply"
+
 
         path_gt_transformation = 'D:/Documents/Semester_Project/Colmap_Test/' + ARKitSceneDataID + '/Output/gt_transformation.json'
 
 
-    mesh_reconstruction = o3d.io.read_triangle_mesh(path_reconstruction[-1])
-    mesh_gt = o3d.io.read_triangle_mesh(path_gt[-1])
+    #mesh_reconstruction = o3d.io.read_triangle_mesh(path_reconstruction)
 
-    # o3d.visualization.draw_geometries([mesh_reconstruction, mesh_gt])
-    # exit()
+    pcd_reconstruction = o3d.io.read_point_cloud(path_reconstruction)
+    mesh_gt = o3d.io.read_triangle_mesh(path_gt)
 
     num_points = 500000
+    #print(mesh_reconstruction)
+
+    #pcd_reconstruction = mesh_reconstruction.sample_points_uniformly(num_points)
+    pcd_gt = mesh_gt.sample_points_uniformly(num_points)
+    #print(pcd_gt.normals)
+    #print(pcd_gt)
+    #o3d.visualization.draw_geometries([mesh_gt, mesh_reconstruction])
+    #exit()
+
 
     # Load the ground truth transformation
-    with open(path_gt_transformation, 'r') as fp:
-        gt_transformation = json.load(fp)
+    # with open(path_gt_transformation, 'r') as fp:
+    #     gt_transformation = json.load(fp)
 
 #0.4584061866053055
 
-    Aligner = MeshAlignment(mesh_reconstruction, mesh_gt, num_points, scale_factor = 0.4584061866053055, voxel_size=0.05, icp_method="standard")
+    #Aligner = MeshAlignment(mesh_reconstruction, mesh_gt, num_points, scale_factor = 0.4584061866053055, voxel_size=0.05, icp_method="standard")
+    Aligner = MeshAlignment(pcd_reconstruction, pcd_gt, num_points, scale_factor = 0.6985151825444622, PCD = True, filtering = True, voxel_size=0.05, icp_method="standard")
 
     Aligner.register()
     #Aligner.draw_registration_result(Aligner.source_down, Aligner.target_down, Aligner.result_ransac.transformation)
@@ -319,16 +340,16 @@ if __name__ == "__main__":
     delta_tran = Aligner.centroid_gt - Aligner.result_icp.transformation[:3, :3] @ (Aligner.centroid_rc * Aligner.scale_factor)
     tran_new = Aligner.result_icp.transformation[:3, 3].reshape(3, 1) * Aligner.backward_factor + delta_tran.reshape(3, 1)
     
-    rotError = rotation_error(np.array(gt_transformation['rotation']), Aligner.result_icp.transformation[:3, :3])
-    tranError = position_error(np.array(gt_transformation['translation']).reshape(3, 1), tran_new) 
+    #rotError = rotation_error(np.array(gt_transformation['rotation']), Aligner.result_icp.transformation[:3, :3])
+    #tranError = position_error(np.array(gt_transformation['translation']).reshape(3, 1), tran_new) 
 
-    print("Rotation Error is {} degree and Translation Error is {} meters".format(rotError, tranError))
+   # print("Rotation Error is {} degree and Translation Error is {} meters".format(rotError, tranError))
 
     
     est_new = np.concatenate(
                     [np.concatenate([Aligner.result_icp.transformation[:3, :3], tran_new], axis=1), np.array([[0, 0, 0, 1]])], axis=0)
 
-    mesh_reconstruction.scale(gt_transformation['scale'], center = np.zeros(3))
-    Aligner.draw_registration_result(mesh_reconstruction, mesh_gt, est_new, colored=True, inverse=False)
+    pcd_reconstruction.scale(0.6985151825444622, center = np.zeros(3))
+    Aligner.draw_registration_result(pcd_reconstruction, mesh_gt, est_new, colored=True, inverse=False)
 
     
