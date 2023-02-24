@@ -16,19 +16,23 @@ import trimesh
 import matplotlib.pyplot as plt
 from PIL import Image
 
+with open(r"/home/biyang/Documents/3D_Gaze/dataset/PupilInvisible/office1/data_1/result_colmap.json", "r") as f:
+    PI_registration = json.load(f)
 
-mesh_trimesh = trimesh.load(r"D:\Documents\Semester_Project\3D_Gaze\dataset\3D_Scanner_App\Apriltag1-dataset2\data3d\textured_output.obj")
-im = Image.open(r"D:\Documents\Semester_Project\3D_Gaze\dataset\3D_Scanner_App\Apriltag1-dataset2\data3d\textured_output.jpg")
+# mesh_trimesh = trimesh.load(r"D:\Documents\Semester_Project\3D_Gaze\dataset\3D_Scanner_App\Apriltag1-dataset2\data3d\textured_output.obj")
+# im = Image.open(r"D:\Documents\Semester_Project\3D_Gaze\dataset\3D_Scanner_App\Apriltag1-dataset2\data3d\textured_output.jpg")
+
+mesh_trimesh = trimesh.load("/home/biyang/Documents/3D_Gaze/dataset/3D_scanner_app/Apriltag1_dataset1/data3d/textured_output.obj")
+im = Image.open(r"/home/biyang/Documents/3D_Gaze/dataset/3D_scanner_app/Apriltag1_dataset1/data3d/textured_output.jpg")
+
 #tex = trimesh.visual.TextureVisuals(image=im)
 #print(mesh_trimesh.visual.uv)
 #mesh_trimesh.visual.texture = tex
 color = trimesh.visual.uv_to_color(mesh_trimesh.visual.uv, im)
 mesh_trimesh.visual.color = color
 
-camera_pose = np.array([[-0.91805858, -0.3806811 ,  0.11068129,  0.21480709],
-       [ 0.35735638, -0.9155172 , -0.18472863, -0.50719932],
-       [ 0.17165333, -0.13003904,  0.97653724, -3.05254395],
-       [ 0.        ,  0.        ,  0.        ,  1.        ]])
+camera_pose = np.array(PI_registration['00011.jpg'])
+
 mesh = pyrender.Mesh.from_trimesh(mesh_trimesh)
 scene = pyrender.Scene()
 scene.add(mesh)
