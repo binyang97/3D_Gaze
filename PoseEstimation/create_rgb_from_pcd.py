@@ -15,32 +15,46 @@ import pyrender
 import trimesh
 import matplotlib.pyplot as plt
 from PIL import Image
+import json
 
-with open(r"/home/biyang/Documents/3D_Gaze/dataset/PupilInvisible/office1/data_1/result_colmap.json", "r") as f:
-    PI_registration = json.load(f)
+if platform == "linux" or platform == "linux2": 
+    with open(r"/home/biyang/Documents/3D_Gaze/dataset/PupilInvisible/office1/data_1/result_colmap.json", "r") as f:
+        PI_registration = json.load(f)
 
-# mesh_trimesh = trimesh.load(r"D:\Documents\Semester_Project\3D_Gaze\dataset\3D_Scanner_App\Apriltag1-dataset2\data3d\textured_output.obj")
-# im = Image.open(r"D:\Documents\Semester_Project\3D_Gaze\dataset\3D_Scanner_App\Apriltag1-dataset2\data3d\textured_output.jpg")
+    
 
-mesh_trimesh = trimesh.load("/home/biyang/Documents/3D_Gaze/dataset/3D_scanner_app/Apriltag1_dataset1/data3d/textured_output.obj")
-im = Image.open(r"/home/biyang/Documents/3D_Gaze/dataset/3D_scanner_app/Apriltag1_dataset1/data3d/textured_output.jpg")
+    mesh_trimesh = trimesh.load("/home/biyang/Documents/3D_Gaze/dataset/3D_scanner_app/Apriltag1_dataset1/data3d/textured_output.obj")
+    im = Image.open(r"/home/biyang/Documents/3D_Gaze/dataset/3D_scanner_app/Apriltag1_dataset1/data3d/textured_output.jpg")
 
+elif platform == "win32":
+    with open(r"D:\Documents\Semester_Project\3D_Gaze\dataset\PupilInvisible\office1\data_1\result_colmap.json", "r") as f:
+        PI_registration_colmap = json.load(f)
+    
+    with open(r"D:\Documents\Semester_Project\3D_Gaze\dataset\PupilInvisible\office1\data_1\result_apriltag.json", "r") as f:
+        PI_registration_apriltag = json.load(f)
+
+    mesh_trimesh = trimesh.load(r"D:\Documents\Semester_Project\3D_Gaze\dataset\3D_Scanner_App\Apriltag1-dataset2\data3d\textured_output.obj")
+    im = Image.open(r"D:\Documents\Semester_Project\3D_Gaze\dataset\3D_Scanner_App\Apriltag1-dataset2\data3d\textured_output.jpg")
+
+print(PI_registration_apriltag.keys())
+print(PI_registration_colmap.keys())
 #tex = trimesh.visual.TextureVisuals(image=im)
 #print(mesh_trimesh.visual.uv)
 #mesh_trimesh.visual.texture = tex
 color = trimesh.visual.uv_to_color(mesh_trimesh.visual.uv, im)
 mesh_trimesh.visual.color = color
 
-camera_pose = np.array(PI_registration['00011.jpg'])
+r = R.from_euler('xyz', [0, 180, 0], degrees=True)
+Additional_Rotation = r.as_matrix()
+additional_rotation = np.concatenate(
+            [np.concatenate([Additional_Rotation, np.zeros((3,1))], axis=1), np.array([[0, 0, 0, 1]])], axis=0)
+#camera_pose = np.array(PI_registration_colmap['01219.jpg']) @ additional_rotation
+camera_pose = np.array(PI_registration_apriltag['330']) @ additional_rotation
 
 mesh = pyrender.Mesh.from_trimesh(mesh_trimesh)
 scene = pyrender.Scene()
 scene.add(mesh)
 # pyrender.Viewer(scene, use_raymond_lighting=True)
-
-
-camera = pyrender.PerspectiveCamera(yfov=np.pi / 3.0, aspectRatio=1.0)
-s = np.sqrt(2)/2
 
 
 PI_intrinsics = np.array([[766.2927454396544, 0.0, 543.6272327745995],
@@ -49,6 +63,9 @@ PI_intrinsics = np.array([[766.2927454396544, 0.0, 543.6272327745995],
 
 img_width = 1088
 img_height = 1080
+fov_y = 2*np.arctan(img_height /(2*PI_intrinsics[1, 1]))
+camera = pyrender.PerspectiveCamera(yfov=fov_y, aspectRatio=1.0)
+s = np.sqrt(2)/2
 
 scene.add(camera, pose=camera_pose)
 light = pyrender.DirectionalLight(color=np.ones(3), intensity=3.0)
