@@ -9,6 +9,14 @@ pip install -r requirements
 You can also clone the original repository of colmap to use the GUI functionalities:
 https://github.com/colmap/colmap
 
+
+## Reference
+AprilTag: https://github.com/AprilRobotics/apriltag \
+ARKitScenes: https://github.com/apple/ARKitScenes \
+Pupil Invisible: https://pupil-labs.com/products/invisible/ 
+
+
+## File Structures
 ```
 📦3D_Gaze
  ┣ 📂3D_Scanner  # File cleaner for data recorded from 3D Scanner App
